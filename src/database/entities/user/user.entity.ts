@@ -10,13 +10,9 @@ import {
 } from 'typeorm';
 import { JobSeeker } from '../job-seeker/job-seeker.entity';
 import { Employer } from '../employer/employer.entity';
+import { Admin } from '../admin/admin.entity';
 import { Role } from '../role/role.entity';
-
-export enum UserStatus {
-  ACTIVE = 'active',
-  INACTIVE = 'inactive',
-  BANNED = 'banned',
-}
+import { UserStatus } from 'src/common/utils/enums';
 
 @Entity('users')
 export class User {
@@ -54,6 +50,9 @@ export class User {
 
   @OneToOne(() => Employer, (employer) => employer.user)
   employer: Employer;
+
+  @OneToOne(() => Employer, (admin) => admin.user)
+  admin: Admin;
 
   @ManyToMany(() => Role, (role) => role.users)
   @JoinTable({

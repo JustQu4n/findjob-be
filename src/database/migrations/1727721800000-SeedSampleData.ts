@@ -60,6 +60,13 @@ export class SeedSampleData1727721800000 implements MigrationInterface {
             ('VietNam Digital Agency', 'Digital Marketing', 'Full-service digital marketing agency helping businesses grow through online channels.', 'Hanoi, Vietnam', 'https://vietdigital.vn')
         `);
 
+           // Insert admin profile
+        await queryRunner.query(`
+            INSERT INTO "admins" ("user_id", "department", "position", "permissions") VALUES 
+            (1, 'System Administration', 'Super Admin', 
+             '{"users": ["read", "create", "update", "delete"], "companies": ["read", "create", "update", "delete"], "job_posts": ["read", "create", "update", "delete"], "applications": ["read", "update"], "roles": ["read", "create", "update", "delete"], "system": ["manage", "configure"]}')
+        `);
+
         // Insert employers
         await queryRunner.query(`
             INSERT INTO "employers" ("user_id", "company_id", "position") VALUES 

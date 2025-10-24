@@ -10,13 +10,8 @@ import {
 import { Employer } from '../employer/employer.entity';
 import { Company } from '../company/company.entity';
 import { Application } from '../application/application.entity';
+import { EmploymentType } from 'src/common/utils/enums';
 
-export enum EmploymentType {
-  FULL_TIME = 'full-time',
-  PART_TIME = 'part-time',
-  INTERNSHIP = 'internship',
-  CONTRACT = 'contract',
-}
 
 @Entity('job_posts')
 export class JobPost {

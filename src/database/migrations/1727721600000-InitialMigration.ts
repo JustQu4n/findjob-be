@@ -68,6 +68,19 @@ export class InitialMigration1727721600000 implements MigrationInterface {
             CONSTRAINT "PK_companies" PRIMARY KEY ("company_id")
         )`);
 
+        // Create admins table
+        await queryRunner.query(`CREATE TABLE "admins" (
+            "admin_id" SERIAL NOT NULL,
+            "user_id" integer NOT NULL,
+            "department" character varying(100),
+            "position" character varying(50),
+            "permissions" text,
+            "created_at" TIMESTAMP NOT NULL DEFAULT now(),
+            "updated_at" TIMESTAMP NOT NULL DEFAULT now(),
+            CONSTRAINT "UQ_admins_user_id" UNIQUE ("user_id"),
+            CONSTRAINT "PK_admins" PRIMARY KEY ("admin_id")
+        )`);
+
         // Create job_seekers table
         await queryRunner.query(`CREATE TABLE "job_seekers" (
             "job_seeker_id" SERIAL NOT NULL,
@@ -123,6 +136,8 @@ export class InitialMigration1727721600000 implements MigrationInterface {
         await queryRunner.query(`ALTER TABLE "role_permissions" ADD CONSTRAINT "FK_role_permissions_role_id" FOREIGN KEY ("role_id") REFERENCES "roles"("role_id") ON DELETE CASCADE ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "role_permissions" ADD CONSTRAINT "FK_role_permissions_permission_id" FOREIGN KEY ("permission_id") REFERENCES "permissions"("permission_id") ON DELETE CASCADE ON UPDATE NO ACTION`);
         
+        await queryRunner.query(`ALTER TABLE "admins" ADD CONSTRAINT "FK_admins_user_id" FOREIGN KEY ("user_id") REFERENCES "users"("user_id") ON DELETE CASCADE ON UPDATE NO ACTION`);
+        
         await queryRunner.query(`ALTER TABLE "job_seekers" ADD CONSTRAINT "FK_job_seekers_user_id" FOREIGN KEY ("user_id") REFERENCES "users"("user_id") ON DELETE CASCADE ON UPDATE NO ACTION`);
         
         await queryRunner.query(`ALTER TABLE "employers" ADD CONSTRAINT "FK_employers_user_id" FOREIGN KEY ("user_id") REFERENCES "users"("user_id") ON DELETE CASCADE ON UPDATE NO ACTION`);
@@ -164,6 +179,7 @@ export class InitialMigration1727721600000 implements MigrationInterface {
         await queryRunner.query(`ALTER TABLE "employers" DROP CONSTRAINT "FK_employers_company_id"`);
         await queryRunner.query(`ALTER TABLE "employers" DROP CONSTRAINT "FK_employers_user_id"`);
         await queryRunner.query(`ALTER TABLE "job_seekers" DROP CONSTRAINT "FK_job_seekers_user_id"`);
+        await queryRunner.query(`ALTER TABLE "admins" DROP CONSTRAINT "FK_admins_user_id"`);
         await queryRunner.query(`ALTER TABLE "role_permissions" DROP CONSTRAINT "FK_role_permissions_permission_id"`);
         await queryRunner.query(`ALTER TABLE "role_permissions" DROP CONSTRAINT "FK_role_permissions_role_id"`);
         await queryRunner.query(`ALTER TABLE "user_roles" DROP CONSTRAINT "FK_user_roles_role_id"`);
@@ -174,6 +190,7 @@ export class InitialMigration1727721600000 implements MigrationInterface {
         await queryRunner.query(`DROP TABLE "job_posts"`);
         await queryRunner.query(`DROP TABLE "employers"`);
         await queryRunner.query(`DROP TABLE "job_seekers"`);
+        await queryRunner.query(`DROP TABLE "admins"`);
         await queryRunner.query(`DROP TABLE "companies"`);
         await queryRunner.query(`DROP TABLE "role_permissions"`);
         await queryRunner.query(`DROP TABLE "user_roles"`);

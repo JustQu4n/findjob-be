@@ -9,3 +9,4 @@ export * from './entities/company/company.entity';
 export * from './entities/employer/employer.entity';
 export * from './entities/job-post/job-post.entity';
 export * from './entities/application/application.entity';
+export * from './entities/admin/admin.entity';

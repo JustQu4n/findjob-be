@@ -8,13 +8,8 @@ import {
 } from 'typeorm';
 import { JobPost } from '../job-post/job-post.entity';
 import { JobSeeker } from '../job-seeker/job-seeker.entity';
+import { ApplicationStatus } from 'src/common/utils/enums';
 
-export enum ApplicationStatus {
-  PENDING = 'pending',
-  REVIEWED = 'reviewed',
-  ACCEPTED = 'accepted',
-  REJECTED = 'rejected',
-}
 
 @Entity('applications')
 export class Application {

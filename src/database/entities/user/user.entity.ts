@@ -38,6 +38,24 @@ export class User {
   })
   status: UserStatus;
 
+  @Column({ type: 'boolean', default: false })
+  is_email_verified: boolean;
+
+  @Column({ type: 'varchar', length: 255, nullable: true, default: null })
+  email_verification_token: string | null;
+
+  @Column({ type: 'timestamp', nullable: true, default: null })
+  email_verification_token_expires: Date | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true, default: null })
+  password_reset_token: string | null;
+
+  @Column({ type: 'timestamp', nullable: true, default: null })
+  password_reset_token_expires: Date | null;
+
+  @Column({ type: 'varchar', length: 500, nullable: true, default: null })
+  refresh_token: string | null;
+
   @CreateDateColumn()
   created_at: Date;
 

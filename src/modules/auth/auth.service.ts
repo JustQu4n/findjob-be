@@ -92,10 +92,9 @@ export class AuthService {
     user.roles = [userRole];
     const savedUser = await this.userRepository.save(user);
 
-    // Create role-specific profile
     await this.createRoleSpecificProfile(savedUser, role);
 
-    // Send verification email
+
     await this.emailService.sendVerificationEmail(
       email,
       full_name,

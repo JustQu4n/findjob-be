@@ -17,9 +17,10 @@ import { Role } from 'src/database/entities/role/role.entity';
 import { JobSeeker } from 'src/database/entities/job-seeker/job-seeker.entity';
 import { Employer } from 'src/database/entities/employer/employer.entity';
 import { Admin } from 'src/database/entities/admin/admin.entity';
+import { Company } from 'src/database/entities/company/company.entity';
 import { UserStatus } from 'src/common/utils/enums';
 
-import { RegisterDto, LoginDto, ForgotPasswordDto, ResetPasswordDto, UserRole } from './dto';
+import { RegisterDto, LoginDto, ForgotPasswordDto, ResetPasswordDto, UserRole, RegisterEmployerDto } from './dto';
 import { EmailService } from '../email/email.service';
 import { RoleName } from 'src/database/entities/role/role.entity';
 
@@ -36,6 +37,8 @@ export class AuthService {
     private employerRepository: Repository<Employer>,
     @InjectRepository(Admin)
     private adminRepository: Repository<Admin>,
+    @InjectRepository(Company)
+    private companyRepository: Repository<Company>,
     private jwtService: JwtService,
     private configService: ConfigService,
     private emailService: EmailService,
@@ -106,6 +109,97 @@ export class AuthService {
         email: savedUser.email,
         full_name: savedUser.full_name,
         role: role,
+      },
+    };
+  }
+
+  async registerEmployer(registerEmployerDto: RegisterEmployerDto) {
+    const {
+      fullname,
+      email,
+      password,
+      company_name,
+      company_address,
+      company_logo_url,
+      company_description,
+      company_industry,
+      company_website,
+    } = registerEmployerDto;
+
+    // Check if user already exists
+    const existingUser = await this.userRepository.findOne({ where: { email } });
+    if (existingUser) {
+      throw new ConflictException('Email đã được sử dụng');
+    }
+
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const password_hash = await bcrypt.hash(password, salt);
+
+    // Generate email verification token
+    const email_verification_token = uuidv4();
+    const email_verification_token_expires = new Date();
+    email_verification_token_expires.setHours(email_verification_token_expires.getHours() + 24);
+
+    // Create company
+    const company = this.companyRepository.create({
+      name: company_name,
+      location: company_address,
+      logo_url: company_logo_url,
+      description: company_description,
+      industry: company_industry,
+      website: company_website,
+    });
+    const savedCompany = await this.companyRepository.save(company);
+
+    const user = this.userRepository.create({
+      email,
+      password_hash,
+      full_name: fullname,
+      status: UserStatus.ACTIVE,
+      is_email_verified: false,
+      email_verification_token,
+      email_verification_token_expires,
+    });
+
+    // Get employer role
+    const employerRole = await this.roleRepository.findOne({
+      where: { role_name: RoleName.EMPLOYER },
+    });
+
+    if (!employerRole) {
+      throw new BadRequestException('Vai trò employer không tồn tại');
+    }
+
+    user.roles = [employerRole];
+    const savedUser = await this.userRepository.save(user);
+
+    // Create employer profile with company association
+    const employer = this.employerRepository.create({
+      user: savedUser,
+      company: savedCompany,
+    });
+    await this.employerRepository.save(employer);
+
+    // Send verification email
+    await this.emailService.sendVerificationEmail(
+      email,
+      company_name,
+      email_verification_token,
+    );
+
+    return {
+      message: 'Đăng ký nhà tuyển dụng thành công! Vui lòng kiểm tra email để xác thực tài khoản.',
+      user: {
+        user_id: savedUser.user_id,
+        email: savedUser.email,
+        company_name: company_name,
+        role: 'employer',
+      },
+      company: {
+        company_id: savedCompany.company_id,
+        name: savedCompany.name,
+        location: savedCompany.location,
       },
     };
   }

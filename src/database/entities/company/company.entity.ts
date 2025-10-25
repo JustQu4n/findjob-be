@@ -28,6 +28,9 @@ export class Company {
   @Column({ type: 'varchar', length: 255, nullable: true })
   website: string;
 
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  logo_url: string;
+
   @CreateDateColumn()
   created_at: Date;
 

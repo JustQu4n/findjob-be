@@ -42,10 +42,26 @@ services:
     networks:
       - backend
 
+  minio:
+    image: quay.io/minio/minio:latest
+    ports:
+      - "9000:9000" # MinIO API port
+      - "9001:9001" # MinIO Console port
+    command: ["server", "--console-address", ":9001", "/data"]
+    volumes:
+      - minio_data:/data # Mount a named volume for persistent data
+    environment:
+      MINIO_ROOT_USER: "yourminiouser" # Replace with your desired username
+      MINIO_ROOT_PASSWORD: "yourminiopassword" # Replace with your desired password
+      MINIO_DEFAULT_BUCKETS: "mybucket" # Optional: create a default bucket on startup
+
+
 volumes:
   pgdata:
   pgadmin_data:
+  minio_data:
 
 networks:
   backend:
     driver: bridge
+

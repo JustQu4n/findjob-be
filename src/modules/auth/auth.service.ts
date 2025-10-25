@@ -174,14 +174,14 @@ export class AuthService {
     user.roles = [employerRole];
     const savedUser = await this.userRepository.save(user);
 
-    // Create employer profile with company association
+
     const employer = this.employerRepository.create({
       user: savedUser,
       company: savedCompany,
     });
     await this.employerRepository.save(employer);
 
-    // Send verification email
+
     await this.emailService.sendVerificationEmail(
       email,
       company_name,

@@ -13,6 +13,7 @@ import { Role } from 'src/database/entities/role/role.entity';
 import { JobSeeker } from 'src/database/entities/job-seeker/job-seeker.entity';
 import { Employer } from 'src/database/entities/employer/employer.entity';
 import { Admin } from 'src/database/entities/admin/admin.entity';
+import { Company } from 'src/database/entities/company/company.entity';
 
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
@@ -20,7 +21,7 @@ import { LocalStrategy } from './strategies/local.strategy';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Role, JobSeeker, Employer, Admin]),
+    TypeOrmModule.forFeature([User, Role, JobSeeker, Employer, Admin, Company]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'careervibe-secret-key-2024',

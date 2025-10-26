@@ -1,4 +1,4 @@
-import {
+   import {
   Injectable,
   NotFoundException,
   BadRequestException,
@@ -67,7 +67,7 @@ export class EmployerManagementService {
   /**
    * Lấy chi tiết một employer
    */
-  async findOne(employerId: number) {
+  async findOne(employerId: string) {
     const employer = await this.employerRepository.findOne({
       where: { employer_id: employerId },
       relations: ['user', 'company', 'jobPosts', 'jobPosts.applications'],
@@ -93,7 +93,7 @@ export class EmployerManagementService {
    * Cập nhật trạng thái employer (active/inactive)
    */
   async updateStatus(
-    employerId: number,
+    employerId: string,
     updateStatusDto: UpdateEmployerStatusDto,
   ) {
     const employer = await this.employerRepository.findOne({
@@ -124,7 +124,7 @@ export class EmployerManagementService {
   /**
    * Xóa employer (soft delete bằng cách set status = INACTIVE)
    */
-  async remove(employerId: number) {
+  async remove(employerId: string) {
     const employer = await this.employerRepository.findOne({
       where: { employer_id: employerId },
       relations: ['user'],

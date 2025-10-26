@@ -9,7 +9,6 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
-  ParseIntPipe,
 } from '@nestjs/common';
 import { EmployerManagementService } from './employer-management.service';
 import { QueryEmployerDto, UpdateEmployerStatusDto } from './dto';
@@ -39,14 +38,14 @@ export class EmployerManagementController {
 
   @Get(':id')
   @HttpCode(HttpStatus.OK)
-  findOne(@Param('id', ParseIntPipe) id: number) {
+  findOne(@Param('id') id: string) {
     return this.employerManagementService.findOne(id);
   }
 
   @Patch(':id/status')
   @HttpCode(HttpStatus.OK)
   updateStatus(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @Body() updateStatusDto: UpdateEmployerStatusDto,
   ) {
     return this.employerManagementService.updateStatus(id, updateStatusDto);
@@ -54,7 +53,7 @@ export class EmployerManagementController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
-  remove(@Param('id', ParseIntPipe) id: number) {
+  remove(@Param('id') id: string) {
     return this.employerManagementService.remove(id);
   }
 }

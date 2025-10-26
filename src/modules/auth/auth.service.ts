@@ -426,7 +426,7 @@ export class AuthService {
     };
   }
 
-  async logout(userId: number) {
+  async logout(userId: string) {
     const user = await this.userRepository.findOne({ where: { user_id: userId } });
     
     if (user) {

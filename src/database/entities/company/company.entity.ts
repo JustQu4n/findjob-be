@@ -4,14 +4,16 @@ import {
   PrimaryGeneratedColumn,
   CreateDateColumn,
   OneToMany,
+  DeleteDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { Employer } from '../employer/employer.entity';
 import { JobPost } from '../job-post/job-post.entity';
 
 @Entity('companies')
 export class Company {
-  @PrimaryGeneratedColumn()
-  company_id: number;
+  @PrimaryGeneratedColumn('uuid')
+  company_id: string;
 
   @Column({ type: 'varchar', length: 150 })
   name: string;
@@ -33,6 +35,12 @@ export class Company {
 
   @CreateDateColumn()
   created_at: Date;
+
+  @UpdateDateColumn()
+  updated_at: Date;
+
+  @DeleteDateColumn()
+  deleted_at: Date;
 
   // Relationships
   @OneToMany(() => Employer, (employer) => employer.company)

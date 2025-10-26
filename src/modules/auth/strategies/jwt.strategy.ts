@@ -8,7 +8,7 @@ import { User } from 'src/database/entities/user/user.entity';
 import { UserStatus } from 'src/common/utils/enums';
 
 export interface JwtPayload {
-  sub: number;
+  sub: string;
   email: string;
   roles: string[];
 }

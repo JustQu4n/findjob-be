@@ -17,6 +17,7 @@ import {
   ResetPasswordDto,
   RefreshTokenDto,
   RegisterEmployerDto,
+  RegisterAdminDto,
 } from './dto';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { JwtRefreshAuthGuard } from 'src/common/guards/jwt-refresh-auth.guard';
@@ -40,6 +41,13 @@ export class AuthController {
   @HttpCode(HttpStatus.CREATED)
   async registerEmployer(@Body() registerEmployerDto: RegisterEmployerDto) {
     return this.authService.registerEmployer(registerEmployerDto);
+  }
+
+  @Public()
+  @Post('register-admin')
+  @HttpCode(HttpStatus.CREATED)
+  async registerAdmin(@Body() registerAdminDto: RegisterAdminDto) {
+    return this.authService.registerAdmin(registerAdminDto);
   }
 
   @Public()

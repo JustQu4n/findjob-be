@@ -11,11 +11,11 @@ import { User } from '../user/user.entity';
 
 @Entity('admins')
 export class Admin {
-  @PrimaryGeneratedColumn()
-  admin_id: number;
+  @PrimaryGeneratedColumn('uuid')
+  admin_id: string;
 
-  @Column({ type: 'int', unique: true })
-  user_id: number;
+  @Column({ type: 'uuid', unique: true })
+  user_id: string;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
   department: string;

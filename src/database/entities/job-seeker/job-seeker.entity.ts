@@ -11,11 +11,11 @@ import { Application } from '../application/application.entity';
 
 @Entity('job_seekers')
 export class JobSeeker {
-  @PrimaryGeneratedColumn()
-  job_seeker_id: number;
+  @PrimaryGeneratedColumn('uuid')
+  job_seeker_id: string;
 
-  @Column({ unique: true })
-  user_id: number;
+  @Column({ type: 'uuid', unique: true })
+  user_id: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   resume_url: string;

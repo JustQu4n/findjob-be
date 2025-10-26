@@ -5,6 +5,8 @@ import {
   ManyToOne,
   JoinColumn,
   CreateDateColumn,
+  UpdateDateColumn,
+  DeleteDateColumn,
 } from 'typeorm';
 import { JobPost } from '../job-post/job-post.entity';
 import { JobSeeker } from '../job-seeker/job-seeker.entity';
@@ -13,14 +15,14 @@ import { ApplicationStatus } from 'src/common/utils/enums';
 
 @Entity('applications')
 export class Application {
-  @PrimaryGeneratedColumn()
-  application_id: number;
+  @PrimaryGeneratedColumn('uuid')
+  application_id: string;
 
-  @Column()
-  job_post_id: number;
+  @Column({ type: 'uuid' })
+  job_post_id: string;
 
-  @Column()
-  job_seeker_id: number;
+  @Column({ type: 'uuid' })
+  job_seeker_id: string;
 
   @Column({
     type: 'enum',
@@ -31,6 +33,12 @@ export class Application {
 
   @CreateDateColumn()
   applied_at: Date;
+
+  @UpdateDateColumn()
+  updated_at: Date;
+
+  @DeleteDateColumn()
+  deleted_at: Date;
 
   // Relationships
   @ManyToOne(() => JobPost, (jobPost) => jobPost.applications, {

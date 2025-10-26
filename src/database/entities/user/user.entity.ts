@@ -7,6 +7,7 @@ import {
   OneToOne,
   ManyToMany,
   JoinTable,
+  DeleteDateColumn,
 } from 'typeorm';
 import { JobSeeker } from '../job-seeker/job-seeker.entity';
 import { Employer } from '../employer/employer.entity';
@@ -16,8 +17,8 @@ import { UserStatus } from 'src/common/utils/enums';
 
 @Entity('users')
 export class User {
-  @PrimaryGeneratedColumn()
-  user_id: number;
+  @PrimaryGeneratedColumn('uuid')
+  user_id: string;
 
   @Column({ type: 'varchar', length: 100 })
   full_name: string;
@@ -61,6 +62,9 @@ export class User {
 
   @UpdateDateColumn()
   updated_at: Date;
+
+  @DeleteDateColumn()
+  deleted_at: Date;
 
   // Relationships
   @OneToOne(() => JobSeeker, (jobSeeker) => jobSeeker.user)

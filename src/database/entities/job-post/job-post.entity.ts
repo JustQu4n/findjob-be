@@ -6,6 +6,8 @@ import {
   JoinColumn,
   CreateDateColumn,
   OneToMany,
+  UpdateDateColumn,
+  DeleteDateColumn,
 } from 'typeorm';
 import { Employer } from '../employer/employer.entity';
 import { Company } from '../company/company.entity';
@@ -15,14 +17,14 @@ import { EmploymentType } from 'src/common/utils/enums';
 
 @Entity('job_posts')
 export class JobPost {
-  @PrimaryGeneratedColumn()
-  job_post_id: number;
+  @PrimaryGeneratedColumn('uuid')
+  job_post_id: string;
 
-  @Column()
-  employer_id: number;
+  @Column({ type: 'uuid' })
+  employer_id: string;
 
-  @Column()
-  company_id: number;
+  @Column({ type: 'uuid' })
+  company_id: string;
 
   @Column({ type: 'varchar', length: 150 })
   title: string;
@@ -48,6 +50,12 @@ export class JobPost {
 
   @CreateDateColumn()
   created_at: Date;
+
+  @UpdateDateColumn()
+  updated_at: Date;
+
+  @DeleteDateColumn()
+  deleted_at: Date;
 
   @Column({ type: 'date', nullable: true })
   deadline: Date;

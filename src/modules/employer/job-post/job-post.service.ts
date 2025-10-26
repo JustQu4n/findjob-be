@@ -24,7 +24,7 @@ export class JobPostService {
   /**
    * Tạo job post mới
    */
-  async create(userId: number, createJobPostDto: CreateJobPostDto) {
+  async create(userId: string, createJobPostDto: CreateJobPostDto) {
     // Tìm employer từ user_id
     const employer = await this.employerRepository.findOne({
       where: { user_id: userId },
@@ -70,7 +70,7 @@ export class JobPostService {
    * Lấy toàn bộ job posts của employer với phân trang (không filter)
    */
   async findAll(
-    userId: number,
+    userId: string,
     query: QueryJobPostDto,
   ): Promise<PaginatedResult<JobPost>> {
     
@@ -104,7 +104,7 @@ export class JobPostService {
   /**
    * Lấy chi tiết một job post
    */
-  async findOne(userId: number, jobPostId: number) {
+  async findOne(userId: string, jobPostId: string) {
     const employer = await this.employerRepository.findOne({
       where: { user_id: userId },
     });
@@ -131,8 +131,8 @@ export class JobPostService {
    * Cập nhật job post
    */
   async update(
-    userId: number,
-    jobPostId: number,
+    userId: string,
+    jobPostId: string,
     updateJobPostDto: UpdateJobPostDto,
   ) {
     const employer = await this.employerRepository.findOne({
@@ -176,7 +176,7 @@ export class JobPostService {
   /**
    * Xóa job post
    */
-  async remove(userId: number, jobPostId: number) {
+  async remove(userId: string, jobPostId: string) {
     const employer = await this.employerRepository.findOne({
       where: { user_id: userId },
     });
@@ -210,7 +210,7 @@ export class JobPostService {
   /**
    * Lấy thống kê job posts của employer
    */
-  async getStatistics(userId: number) {
+  async getStatistics(userId: string) {
     const employer = await this.employerRepository.findOne({
       where: { user_id: userId },
     });
@@ -260,7 +260,7 @@ export class JobPostService {
   /**
    * Debug: Lấy thông tin employer
    */
-  async getEmployerInfo(userId: number) {
+  async getEmployerInfo(userId: string) {
     const employer = await this.employerRepository.findOne({
       where: { user_id: userId },
       relations: ['user', 'company'],
@@ -286,7 +286,7 @@ export class JobPostService {
   /**
    * Helper: Tìm job post theo ID với relations
    */
-  private async findOneById(jobPostId: number): Promise<JobPost> {
+  private async findOneById(jobPostId: string): Promise<JobPost> {
     const jobPost = await this.jobPostRepository.findOne({
       where: { job_post_id: jobPostId },
       relations: ['company', 'employer', 'employer.user'],

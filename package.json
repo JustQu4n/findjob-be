@@ -24,7 +24,8 @@
     "migration:generate": "npm run typeorm migration:generate -- -d data-source.ts",
     "migration:create": "npm run typeorm migration:create",
     "schema:drop": "npm run typeorm schema:drop -- -d data-source.ts",
-    "schema:sync": "npm run typeorm schema:sync -- -d data-source.ts"
+    "schema:sync": "npm run typeorm schema:sync -- -d data-source.ts",
+    "db:reset": "npm run schema:drop && npm run migration:run"
   },
   "dependencies": {
     "@nestjs-modules/mailer": "^2.0.2",

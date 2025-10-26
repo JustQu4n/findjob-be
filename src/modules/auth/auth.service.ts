@@ -20,7 +20,7 @@ import { Admin } from 'src/database/entities/admin/admin.entity';
 import { Company } from 'src/database/entities/company/company.entity';
 import { UserStatus } from 'src/common/utils/enums';
 
-import { RegisterDto, LoginDto, ForgotPasswordDto, ResetPasswordDto, UserRole, RegisterEmployerDto } from './dto';
+import { RegisterDto, LoginDto, ForgotPasswordDto, ResetPasswordDto, UserRole, RegisterEmployerDto, RegisterAdminDto } from './dto';
 import { EmailService } from '../email/email.service';
 import { RoleName } from 'src/database/entities/role/role.entity';
 
@@ -198,6 +198,81 @@ export class AuthService {
         company_id: savedCompany.company_id,
         name: savedCompany.name,
         location: savedCompany.location,
+      },
+    };
+  }
+
+  async registerAdmin(registerAdminDto: RegisterAdminDto) {
+    const {
+      full_name,
+      email,
+      password,
+      department,
+      position,
+    } = registerAdminDto;
+
+    // Check if user already exists
+    const existingUser = await this.userRepository.findOne({ where: { email } });
+    if (existingUser) {
+      throw new ConflictException('Email đã được sử dụng');
+    }
+
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const password_hash = await bcrypt.hash(password, salt);
+
+    // Generate email verification token
+    const email_verification_token = uuidv4();
+    const email_verification_token_expires = new Date();
+    email_verification_token_expires.setHours(email_verification_token_expires.getHours() + 24);
+
+    // Create user
+    const user = this.userRepository.create({
+      email,
+      password_hash,
+      full_name,
+      status: UserStatus.ACTIVE,
+      is_email_verified: false,
+      email_verification_token,
+      email_verification_token_expires,
+    });
+
+    // Get admin role
+    const adminRole = await this.roleRepository.findOne({
+      where: { role_name: RoleName.ADMIN },
+    });
+
+    if (!adminRole) {
+      throw new BadRequestException('Vai trò admin không tồn tại');
+    }
+
+    user.roles = [adminRole];
+    const savedUser = await this.userRepository.save(user);
+
+    // Create admin profile
+    const admin = this.adminRepository.create({
+      user_id: savedUser.user_id,
+      department,
+      position,
+    });
+    await this.adminRepository.save(admin);
+
+    // Send verification email
+    await this.emailService.sendVerificationEmail(
+      email,
+      full_name,
+      email_verification_token,
+    );
+
+    return {
+      message: 'Đăng ký admin thành công! Vui lòng kiểm tra email để xác thực tài khoản.',
+      user: {
+        user_id: savedUser.user_id,
+        email: savedUser.email,
+        full_name: savedUser.full_name,
+        role: 'admin',
+        department,
+        position,
       },
     };
   }

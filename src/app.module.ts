@@ -6,8 +6,12 @@ import { UsersModule } from './modules/users/users.module';
 import { DatabaseModule } from './database/database.module';
 
 @Module({
-  imports: [AdminModule, EmployerModule, UsersModule, AuthModule, 
-    DatabaseModule
+  imports: [
+    AdminModule,
+    EmployerModule,
+    UsersModule,
+    AuthModule,
+    DatabaseModule,
   ],
   controllers: [],
   providers: [],

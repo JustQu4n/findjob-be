@@ -11,6 +11,7 @@ import {
 } from 'typeorm';
 import { Employer } from '../employer/employer.entity';
 import { Company } from '../company/company.entity';
+import { Category } from '../category/category.entity';
 import { Application } from '../application/application.entity';
 import { EmploymentType } from 'src/common/utils/enums';
 
@@ -25,6 +26,9 @@ export class JobPost {
 
   @Column({ type: 'uuid' })
   company_id: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  category_id: string;
 
   @Column({ type: 'varchar', length: 150 })
   title: string;
@@ -72,6 +76,10 @@ export class JobPost {
   })
   @JoinColumn({ name: 'company_id' })
   company: Company;
+
+  @ManyToOne(() => Category, { onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'category_id' })
+  category: Category;
 
   @OneToMany(() => Application, (application) => application.jobPost)
   applications: Application[];

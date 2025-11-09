@@ -49,6 +49,7 @@ export class JobPostService {
       salary_range: createJobPostDto.salary_range,
       location: createJobPostDto.location,
       employment_type: createJobPostDto.employment_type,
+      category_id: createJobPostDto.category_id,
     });
 
     jobPost.employer_id = employer.employer_id;
@@ -289,7 +290,7 @@ export class JobPostService {
   private async findOneById(jobPostId: string): Promise<JobPost> {
     const jobPost = await this.jobPostRepository.findOne({
       where: { job_post_id: jobPostId },
-      relations: ['company', 'employer', 'employer.user'],
+      relations: ['company', 'employer', 'employer.user', 'category'],
     });
 
     if (!jobPost) {

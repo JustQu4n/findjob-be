@@ -4,6 +4,7 @@ import {
   IsEnum,
   MaxLength,
   IsDateString,
+  IsUUID,
 } from 'class-validator';
 import { EmploymentType } from 'src/common/utils/enums';
 
@@ -34,6 +35,10 @@ export class UpdateJobPostDto {
   @IsOptional()
   @IsEnum(EmploymentType, { message: 'Loại công việc không hợp lệ' })
   employment_type?: EmploymentType;
+
+  @IsOptional()
+  @IsUUID('4', { message: 'Category ID phải là UUID hợp lệ' })
+  category_id?: string;
 
   @IsOptional()
   @IsDateString({}, { message: 'Deadline phải là ngày hợp lệ' })

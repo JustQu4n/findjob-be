@@ -31,6 +31,12 @@ export class Application {
   })
   status: ApplicationStatus;
 
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  resume_url: string;
+
+  @Column({ type: 'text', nullable: true })
+  cover_letter: string;
+
   @CreateDateColumn()
   applied_at: Date;
 

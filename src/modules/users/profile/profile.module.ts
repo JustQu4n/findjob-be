@@ -4,12 +4,16 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { JobSeeker } from 'src/database/entities/job-seeker/job-seeker.entity';
 import { Application } from 'src/database/entities/application/application.entity';
 import { User } from 'src/database/entities/user/user.entity';
+import { MinioModule } from 'src/modules/minio/minio.module';
 
 import { ProfileService } from './profile.service';
 import { ProfileController } from './profile.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([JobSeeker, Application, User])],
+  imports: [
+    TypeOrmModule.forFeature([JobSeeker, Application, User]),
+    MinioModule,
+  ],
   controllers: [ProfileController],
   providers: [ProfileService],
   exports: [ProfileService],

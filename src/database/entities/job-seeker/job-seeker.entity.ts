@@ -20,6 +20,9 @@ export class JobSeeker {
   @Column({ type: 'varchar', length: 255, nullable: true })
   resume_url: string;
 
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  avatar_url: string;
+
   @Column({ type: 'text', nullable: true })
   skills: string;
 

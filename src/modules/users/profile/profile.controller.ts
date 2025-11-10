@@ -2,13 +2,17 @@ import {
   Controller,
   Get,
   Put,
+  Patch,
   Delete,
   Param,
   Body,
   HttpCode,
   HttpStatus,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ProfileService } from './profile.service';
 import { UpdateJobSeekerDto } from './dto';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
@@ -45,6 +49,18 @@ export class ProfileController {
   @HttpCode(HttpStatus.OK)
   async remove(@GetUser('user_id') userId: string) {
     return this.jobSeekerService.remove(userId);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('jobseeker')
+  @Patch('avatar')
+  @UseInterceptors(FileInterceptor('avatar'))
+  @HttpCode(HttpStatus.OK)
+  async updateAvatar(
+    @GetUser('user_id') userId: string,
+    @UploadedFile() avatar: Express.Multer.File,
+  ) {
+    return this.jobSeekerService.updateAvatar(userId, avatar);
   }
 
   @Public()

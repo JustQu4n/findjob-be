@@ -25,6 +25,9 @@ export class Employer {
   @Column({ type: 'varchar', length: 100, nullable: true })
   position: string;
 
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  avatar_url: string;
+
   // Relationships
   @OneToOne(() => User, (user) => user.employer)
   @JoinColumn({ name: 'user_id' })

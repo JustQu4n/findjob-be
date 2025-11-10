@@ -7,7 +7,10 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthService } from './auth.service';
 import {
   RegisterDto,
@@ -32,22 +35,34 @@ export class AuthController {
   @Public()
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
-  async register(@Body() registerDto: RegisterDto) {
-    return this.authService.register(registerDto);
+  @UseInterceptors(FileInterceptor('avatar'))
+  async register(
+    @Body() registerDto: RegisterDto,
+    @UploadedFile() avatar?: Express.Multer.File,
+  ) {
+    return this.authService.register(registerDto, avatar);
   }
 
   @Public()
   @Post('register-employer')
   @HttpCode(HttpStatus.CREATED)
-  async registerEmployer(@Body() registerEmployerDto: RegisterEmployerDto) {
-    return this.authService.registerEmployer(registerEmployerDto);
+  @UseInterceptors(FileInterceptor('avatar'))
+  async registerEmployer(
+    @Body() registerEmployerDto: RegisterEmployerDto,
+    @UploadedFile() avatar?: Express.Multer.File,
+  ) {
+    return this.authService.registerEmployer(registerEmployerDto, avatar);
   }
 
   @Public()
   @Post('register-admin')
   @HttpCode(HttpStatus.CREATED)
-  async registerAdmin(@Body() registerAdminDto: RegisterAdminDto) {
-    return this.authService.registerAdmin(registerAdminDto);
+  @UseInterceptors(FileInterceptor('avatar'))
+  async registerAdmin(
+    @Body() registerAdminDto: RegisterAdminDto,
+    @UploadedFile() avatar?: Express.Multer.File,
+  ) {
+    return this.authService.registerAdmin(registerAdminDto, avatar);
   }
 
   @Public()

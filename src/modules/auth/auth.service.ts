@@ -22,6 +22,7 @@ import { UserStatus } from 'src/common/utils/enums';
 
 import { RegisterDto, LoginDto, ForgotPasswordDto, ResetPasswordDto, UserRole, RegisterEmployerDto, RegisterAdminDto } from './dto';
 import { EmailService } from '../email/email.service';
+import { MinioService } from '../minio/minio.service';
 import { RoleName } from 'src/database/entities/role/role.entity';
 
 @Injectable()
@@ -42,9 +43,10 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
     private emailService: EmailService,
+    private minioService: MinioService,
   ) {}
 
-  async register(registerDto: RegisterDto) {
+  async register(registerDto: RegisterDto, avatar?: Express.Multer.File) {
     const { email, password, full_name, phone, role } = registerDto;
 
     // Check if user already exists
@@ -62,12 +64,26 @@ export class AuthService {
     const email_verification_token_expires = new Date();
     email_verification_token_expires.setHours(email_verification_token_expires.getHours() + 24);
 
+    // Upload avatar if provided
+    let avatar_url: string | undefined = undefined;
+    if (avatar) {
+      // Validate image type
+      const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+      if (!allowedMimeTypes.includes(avatar.mimetype)) {
+        throw new BadRequestException(
+          'File avatar không hợp lệ. Chỉ chấp nhận JPG, PNG, GIF',
+        );
+      }
+      avatar_url = await this.minioService.uploadFile(avatar, 'avatars');
+    }
+
     // Create user
     const user = this.userRepository.create({
       email,
       password_hash,
       full_name,
       phone,
+      avatar_url,
       status: UserStatus.ACTIVE,
       is_email_verified: false,
       email_verification_token,
@@ -92,7 +108,7 @@ export class AuthService {
     user.roles = [userRole];
     const savedUser = await this.userRepository.save(user);
 
-    await this.createRoleSpecificProfile(savedUser, role);
+    await this.createRoleSpecificProfile(savedUser, role, avatar_url);
 
 
     await this.emailService.sendVerificationEmail(
@@ -112,7 +128,7 @@ export class AuthService {
     };
   }
 
-  async registerEmployer(registerEmployerDto: RegisterEmployerDto) {
+  async registerEmployer(registerEmployerDto: RegisterEmployerDto, avatar?: Express.Multer.File) {
     const {
       fullname,
       email,
@@ -140,6 +156,18 @@ export class AuthService {
     const email_verification_token_expires = new Date();
     email_verification_token_expires.setHours(email_verification_token_expires.getHours() + 24);
 
+    // Upload avatar if provided
+    let avatar_url: string | undefined = undefined;
+    if (avatar) {
+      const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+      if (!allowedMimeTypes.includes(avatar.mimetype)) {
+        throw new BadRequestException(
+          'File avatar không hợp lệ. Chỉ chấp nhận JPG, PNG, GIF',
+        );
+      }
+      avatar_url = await this.minioService.uploadFile(avatar, 'avatars');
+    }
+
     // Create company
     const company = this.companyRepository.create({
       name: company_name,
@@ -155,6 +183,7 @@ export class AuthService {
       email,
       password_hash,
       full_name: fullname,
+      avatar_url,
       status: UserStatus.ACTIVE,
       is_email_verified: false,
       email_verification_token,
@@ -177,6 +206,7 @@ export class AuthService {
     const employer = this.employerRepository.create({
       user_id: savedUser.user_id,
       company_id: savedCompany.company_id,
+      avatar_url,
     });
     await this.employerRepository.save(employer);
 
@@ -202,7 +232,7 @@ export class AuthService {
     };
   }
 
-  async registerAdmin(registerAdminDto: RegisterAdminDto) {
+  async registerAdmin(registerAdminDto: RegisterAdminDto, avatar?: Express.Multer.File) {
     const {
       full_name,
       email,
@@ -226,11 +256,24 @@ export class AuthService {
     const email_verification_token_expires = new Date();
     email_verification_token_expires.setHours(email_verification_token_expires.getHours() + 24);
 
+    // Upload avatar if provided
+    let avatar_url: string | undefined = undefined;
+    if (avatar) {
+      const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+      if (!allowedMimeTypes.includes(avatar.mimetype)) {
+        throw new BadRequestException(
+          'File avatar không hợp lệ. Chỉ chấp nhận JPG, PNG, GIF',
+        );
+      }
+      avatar_url = await this.minioService.uploadFile(avatar, 'avatars');
+    }
+
     // Create user
     const user = this.userRepository.create({
       email,
       password_hash,
       full_name,
+      avatar_url,
       status: UserStatus.ACTIVE,
       is_email_verified: false,
       email_verification_token,
@@ -277,14 +320,20 @@ export class AuthService {
     };
   }
 
-  private async createRoleSpecificProfile(user: User, role: UserRole) {
+  private async createRoleSpecificProfile(user: User, role: UserRole, avatar_url?: string) {
     switch (role) {
       case UserRole.JOB_SEEKER:
-        const jobSeeker = this.jobSeekerRepository.create({ user });
+        const jobSeeker = this.jobSeekerRepository.create({ 
+          user,
+          avatar_url 
+        });
         await this.jobSeekerRepository.save(jobSeeker);
         break;
       case UserRole.EMPLOYER:
-        const employer = this.employerRepository.create({ user });
+        const employer = this.employerRepository.create({ 
+          user,
+          avatar_url 
+        });
         await this.employerRepository.save(employer);
         break;
       case UserRole.ADMIN:

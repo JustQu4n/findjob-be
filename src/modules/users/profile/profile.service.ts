@@ -35,16 +35,32 @@ export class ProfileService {
       throw new NotFoundException('Không tìm thấy hồ sơ người tìm việc');
     }
 
-    return { data: jobSeeker };
+    // Get presigned URL for avatar if exists
+    let avatar_url: string | null = null;
+    if (jobSeeker.avatar_url) {
+      avatar_url = await this.minioService.getFileUrl(jobSeeker.avatar_url);
+    }
+
+    return { 
+      data: {
+        ...jobSeeker,
+        avatar_url,
+      }
+    };
   }
 
-  async update(userId: string, dto: UpdateJobSeekerDto) {
+  async update(userId: string, dto: UpdateJobSeekerDto, authenticatedUserId?: string) {
     const owner = await this.jobSeekerRepository.findOne({
       where: { user_id: userId },
     });
 
     if (!owner) {
       throw new NotFoundException('Không tìm thấy hồ sơ người tìm việc');
+    }
+
+    // Verify ownership if authenticatedUserId is provided
+    if (authenticatedUserId && owner.user_id !== authenticatedUserId) {
+      throw new ForbiddenException('Bạn không có quyền cập nhật hồ sơ này');
     }
 
     Object.assign(owner, dto);

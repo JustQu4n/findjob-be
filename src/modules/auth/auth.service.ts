@@ -47,7 +47,22 @@ export class AuthService {
   ) {}
 
   async register(registerDto: RegisterDto, avatar?: Express.Multer.File) {
-    const { email, password, full_name, phone, role } = registerDto;
+    const { email, password, full_name, phone, address, skills, role } = registerDto;
+
+    // Parse skills if it's a string (from multipart/form-data)
+    let parsedSkills: string[] | undefined;
+    if (skills) {
+      if (typeof skills === 'string') {
+        try {
+          parsedSkills = JSON.parse(skills as string);
+        } catch {
+          // If not JSON, treat as comma-separated string
+          parsedSkills = (skills as string).split(',').map(s => s.trim()).filter(s => s);
+        }
+      } else {
+        parsedSkills = skills as string[];
+      }
+    }
 
     // Check if user already exists
     const existingUser = await this.userRepository.findOne({ where: { email } });
@@ -83,6 +98,7 @@ export class AuthService {
       password_hash,
       full_name,
       phone,
+      address,
       avatar_url,
       status: UserStatus.ACTIVE,
       is_email_verified: false,
@@ -108,7 +124,7 @@ export class AuthService {
     user.roles = [userRole];
     const savedUser = await this.userRepository.save(user);
 
-    await this.createRoleSpecificProfile(savedUser, role, avatar_url);
+    await this.createRoleSpecificProfile(savedUser, role, avatar_url, parsedSkills);
 
 
     await this.emailService.sendVerificationEmail(
@@ -320,12 +336,13 @@ export class AuthService {
     };
   }
 
-  private async createRoleSpecificProfile(user: User, role: UserRole, avatar_url?: string) {
+  private async createRoleSpecificProfile(user: User, role: UserRole, avatar_url?: string, skills?: string[]) {
     switch (role) {
       case UserRole.JOB_SEEKER:
         const jobSeeker = this.jobSeekerRepository.create({ 
           user,
-          avatar_url 
+          avatar_url,
+          ...(skills && { skills: skills.join(', ') })
         });
         await this.jobSeekerRepository.save(jobSeeker);
         break;
@@ -437,6 +454,13 @@ export class AuthService {
     user.refresh_token = tokens.refreshToken;
     await this.userRepository.save(user);
 
+    // Get avatar URL if exists
+    let avatar_url: string | null = null;
+    if (user.avatar_url) {
+      avatar_url = await this.minioService.getFileUrl(user.avatar_url);
+    }
+
+    
     return {
       message: 'Đăng nhập thành công',
       user: {
@@ -444,6 +468,7 @@ export class AuthService {
         email: user.email,
         full_name: user.full_name,
         phone: user.phone,
+        avatar_url,
         roles: user.roles.map(role => role.role_name),
       },
       ...tokens,
@@ -572,5 +597,35 @@ export class AuthService {
       accessToken,
       refreshToken,
     };
+  }
+
+  async getProfile(user: User) {
+    let avatar_url: string | null = null;
+    if (user.avatar_url) {
+      avatar_url = await this.minioService.getFileUrl(user.avatar_url);
+    }
+
+    return {
+      user: {
+        user_id: user.user_id,
+        email: user.email,
+        full_name: user.full_name,
+        phone: user.phone,
+        address: user.address,
+        avatar_url,
+        status: user.status,
+        is_email_verified: user.is_email_verified,
+        roles: user.roles.map(role => role.role_name),
+        created_at: user.created_at,
+      },
+    };
+  }
+
+  async getAvatarUrl(fileName: string) {
+    if (!fileName) {
+      throw new BadRequestException('File name is required');
+    }
+    const url = await this.minioService.getFileUrl(fileName);
+    return { url };
   }
 }

@@ -86,7 +86,7 @@ export class MinioService {
       return await this.minioClient.presignedGetObject(
         this.bucketName,
         fileName,
-        24 * 60 * 60, // URL valid for 24 hours
+        7 * 24 * 60 * 60, // URL valid for 7 days
       );
     } catch (error) {
       throw new BadRequestException(

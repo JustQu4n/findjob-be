@@ -64,6 +64,15 @@ export class JobPost {
   @Column({ type: 'date', nullable: true })
   deadline: Date;
 
+  @Column({ type: 'varchar', length: 50, default: 'active' })
+  status: string; // active, closed, expired
+
+  @Column({ type: 'int', default: 0 })
+  views_count: number;
+
+  @Column({ type: 'int', default: 0 })
+  saves_count: number;
+
   // Relationships
   @ManyToOne(() => Employer, (employer) => employer.jobPosts, {
     onDelete: 'CASCADE',

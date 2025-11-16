@@ -11,6 +11,10 @@ export class UpdateJobSeekerDto {
   skills?: string;
 
   @IsOptional()
+  @IsString() 
+  bio?: string;
+
+  @IsOptional()
   @IsString()
   experience?: string;
 

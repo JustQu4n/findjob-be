@@ -66,10 +66,10 @@ export class AuthController {
   }
 
   @Public()
-  @Post('verify-email')
+  @Get('verify-email')
   @HttpCode(HttpStatus.OK)
-  async verifyEmail(@Body() verifyEmailDto: VerifyEmailDto) {
-    return this.authService.verifyEmail(verifyEmailDto.token);
+  async verifyEmail(@Query('token') token: string) {
+    return this.authService.verifyEmail(token);
   }
 
   @Public()
@@ -118,17 +118,12 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Get('me')
   async getProfile(@GetUser() user: User) {
-    return {
-      user: {
-        user_id: user.user_id,
-        email: user.email,
-        full_name: user.full_name,
-        phone: user.phone,
-        status: user.status,
-        is_email_verified: user.is_email_verified,
-        roles: user.roles.map(role => role.role_name),
-        created_at: user.created_at,
-      },
-    };
+    return this.authService.getProfile(user);
+  }
+
+  @Public()
+  @Get('avatar/:fileName')
+  async getAvatar(@Query('fileName') fileName: string) {
+    return this.authService.getAvatarUrl(fileName);
   }
 }

@@ -34,13 +34,14 @@ export class ProfileController {
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('jobseeker')
-  @Put()
+  @Put(':id')
   @HttpCode(HttpStatus.OK)
   async update(
-    @GetUser('user_id') userId: string,
+    @GetUser('user_id') authenticatedUserId: string,
+    @Param('id') id: string,
     @Body() updateDto: UpdateJobSeekerDto,
   ) {
-    return this.jobSeekerService.update(userId, updateDto);
+    return this.jobSeekerService.update(id, updateDto, authenticatedUserId);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

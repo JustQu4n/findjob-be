@@ -27,6 +27,9 @@ export class JobSeeker {
   skills: string;
 
   @Column({ type: 'text', nullable: true })
+  bio: string;
+
+  @Column({ type: 'text', nullable: true })
   experience: string;
 
   @Column({ type: 'text', nullable: true })

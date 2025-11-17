@@ -13,3 +13,8 @@ export * from './entities/admin/admin.entity';
 export * from './entities/category/category.entity';
 export * from './entities/saved-job/saved-job.entity';
 export * from './entities/followed-company/followed-company.entity';
+export * from './entities/experience/experience.entity';
+export * from './entities/skill/skill.entity';
+export * from './entities/user-skill/user-skill.entity';
+export * from './entities/education/education.entity';
+export * from './entities/project/project.entity';

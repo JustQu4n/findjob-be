@@ -10,6 +10,10 @@ import { User } from '../user/user.entity';
 import { Application } from '../application/application.entity';
 import { SavedJob } from '../saved-job/saved-job.entity';
 import { FollowedCompany } from '../followed-company/followed-company.entity';
+import { Experience } from '../experience/experience.entity';
+import { UserSkill } from '../user-skill/user-skill.entity';
+import { Education } from '../education/education.entity';
+import { Project } from '../project/project.entity';
 
 @Entity('job_seekers')
 export class JobSeeker {
@@ -50,4 +54,16 @@ export class JobSeeker {
 
   @OneToMany(() => FollowedCompany, (followedCompany) => followedCompany.jobSeeker)
   followedCompanies: FollowedCompany[];
+
+  @OneToMany(() => Experience, (experience) => experience.jobSeeker)
+  experiences: Experience[];
+
+  @OneToMany(() => UserSkill, (userSkill) => userSkill.jobSeeker)
+  userSkills: UserSkill[];
+
+  @OneToMany(() => Education, (education) => education.jobSeeker)
+  educations: Education[];
+
+  @OneToMany(() => Project, (project) => project.jobSeeker)
+  projects: Project[];
 }

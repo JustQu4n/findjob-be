@@ -1,24 +1,18 @@
-import { IsOptional, IsString, IsUrl, MaxLength } from 'class-validator';
+import { IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class UpdateJobSeekerDto {
   @IsOptional()
-  @IsUrl({}, { message: 'Resume URL must be a valid URL' })
-  @MaxLength(2048)
-  resume_url?: string;
-
-  @IsOptional()
   @IsString()
-  skills?: string;
-
-  @IsOptional()
-  @IsString() 
   bio?: string;
 
+  // User fields
   @IsOptional()
   @IsString()
-  experience?: string;
+  @MaxLength(15)
+  phone?: string;
 
   @IsOptional()
   @IsString()
-  education?: string;
+  @MaxLength(255)
+  address?: string;
 }

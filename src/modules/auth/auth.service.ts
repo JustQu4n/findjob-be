@@ -47,22 +47,7 @@ export class AuthService {
   ) {}
 
   async register(registerDto: RegisterDto, avatar?: Express.Multer.File) {
-    const { email, password, full_name, phone, address, skills, role } = registerDto;
-
-    // Parse skills if it's a string (from multipart/form-data)
-    let parsedSkills: string[] | undefined;
-    if (skills) {
-      if (typeof skills === 'string') {
-        try {
-          parsedSkills = JSON.parse(skills as string);
-        } catch {
-          // If not JSON, treat as comma-separated string
-          parsedSkills = (skills as string).split(',').map(s => s.trim()).filter(s => s);
-        }
-      } else {
-        parsedSkills = skills as string[];
-      }
-    }
+    const { email, password, full_name, phone, address, role } = registerDto;
 
     // Check if user already exists
     const existingUser = await this.userRepository.findOne({ where: { email } });
@@ -124,7 +109,7 @@ export class AuthService {
     user.roles = [userRole];
     const savedUser = await this.userRepository.save(user);
 
-    await this.createRoleSpecificProfile(savedUser, role, avatar_url, parsedSkills);
+    await this.createRoleSpecificProfile(savedUser, role, avatar_url);
 
 
     await this.emailService.sendVerificationEmail(
@@ -134,6 +119,7 @@ export class AuthService {
     );
 
     return {
+      success: true,
       message: 'Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.',
       user: {
         user_id: savedUser.user_id,
@@ -233,6 +219,7 @@ export class AuthService {
     );
 
     return {
+      success: true,
       message: 'Đăng ký nhà tuyển dụng thành công! Vui lòng kiểm tra email để xác thực tài khoản.',
       user: {
         user_id: savedUser.user_id,
@@ -324,6 +311,7 @@ export class AuthService {
     );
 
     return {
+      success: true,
       message: 'Đăng ký admin thành công! Vui lòng kiểm tra email để xác thực tài khoản.',
       user: {
         user_id: savedUser.user_id,
@@ -336,13 +324,12 @@ export class AuthService {
     };
   }
 
-  private async createRoleSpecificProfile(user: User, role: UserRole, avatar_url?: string, skills?: string[]) {
+  private async createRoleSpecificProfile(user: User, role: UserRole, avatar_url?: string) {
     switch (role) {
       case UserRole.JOB_SEEKER:
         const jobSeeker = this.jobSeekerRepository.create({ 
           user,
-          avatar_url,
-          ...(skills && { skills: skills.join(', ') })
+          avatar_url
         });
         await this.jobSeekerRepository.save(jobSeeker);
         break;
@@ -388,6 +375,7 @@ export class AuthService {
     await this.emailService.sendWelcomeEmail(user.email, user.full_name, roleName);
 
     return {
+      success: true,
       message: 'Xác thực email thành công! Bạn có thể đăng nhập ngay.',
     };
   }
@@ -419,6 +407,7 @@ export class AuthService {
     );
 
     return {
+      success: true,
       message: 'Email xác thực đã được gửi lại',
     };
   }
@@ -493,6 +482,7 @@ export class AuthService {
 
     
     return {
+      success: true,
       message: 'Đăng nhập thành công',
       user: {
         user_id: user.user_id,
@@ -527,6 +517,7 @@ export class AuthService {
     await this.userRepository.save(user);
 
     return {
+      success: true,
       message: 'Refresh token thành công',
       ...tokens,
     };
@@ -541,6 +532,7 @@ export class AuthService {
     }
 
     return {
+      success: true,
       message: 'Đăng xuất thành công',
     };
   }
@@ -553,6 +545,7 @@ export class AuthService {
     if (!user) {
       // Don't reveal if user exists for security
       return {
+        success: true,
         message: 'Nếu email tồn tại, link đặt lại mật khẩu đã được gửi',
       };
     }
@@ -573,6 +566,7 @@ export class AuthService {
     );
 
     return {
+      success: true,
       message: 'Nếu email tồn tại, link đặt lại mật khẩu đã được gửi',
     };
   }
@@ -603,6 +597,7 @@ export class AuthService {
     await this.userRepository.save(user);
 
     return {
+      success: true,
       message: 'Đặt lại mật khẩu thành công',
     };
   }
@@ -638,6 +633,7 @@ export class AuthService {
     }
 
     return {
+      success: true,
       user: {
         user_id: user.user_id,
         email: user.email,
@@ -658,6 +654,6 @@ export class AuthService {
       throw new BadRequestException('File name is required');
     }
     const url = await this.minioService.getFileUrl(fileName);
-    return { url };
+    return { success: true, url };
   }
 }

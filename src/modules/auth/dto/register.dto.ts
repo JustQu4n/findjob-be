@@ -32,10 +32,6 @@ export class RegisterDto {
   @IsString()
   address?: string;
 
-  @IsOptional()
-  @IsString({ each: true })
-  skills?: string[];
-
   @IsNotEmpty({ message: 'Vai trò không được để trống' })
   @IsEnum(UserRole, { message: 'Vai trò không hợp lệ' })
   role: UserRole;

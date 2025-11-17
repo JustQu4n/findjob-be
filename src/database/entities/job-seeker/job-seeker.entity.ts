@@ -8,6 +8,8 @@ import {
 } from 'typeorm';
 import { User } from '../user/user.entity';
 import { Application } from '../application/application.entity';
+import { SavedJob } from '../saved-job/saved-job.entity';
+import { FollowedCompany } from '../followed-company/followed-company.entity';
 
 @Entity('job_seekers')
 export class JobSeeker {
@@ -42,4 +44,10 @@ export class JobSeeker {
 
   @OneToMany(() => Application, (application) => application.jobSeeker)
   applications: Application[];
+
+  @OneToMany(() => SavedJob, (savedJob) => savedJob.jobSeeker)
+  savedJobs: SavedJob[];
+
+  @OneToMany(() => FollowedCompany, (followedCompany) => followedCompany.jobSeeker)
+  followedCompanies: FollowedCompany[];
 }

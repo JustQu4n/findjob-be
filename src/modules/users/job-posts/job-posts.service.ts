@@ -1,7 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, ILike } from 'typeorm';
 import { JobPost } from '@/database/entities/job-post/job-post.entity';
+import { SavedJob } from '@/database/entities/saved-job/saved-job.entity';
+import { JobSeeker } from '@/database/entities/job-seeker/job-seeker.entity';
 import { PaginationDto } from '@/common/dto';
 import { SearchJobPostDto } from './dto';
 
@@ -10,6 +12,10 @@ export class JobPostsService {
   constructor(
     @InjectRepository(JobPost)
     private jobPostRepository: Repository<JobPost>,
+    @InjectRepository(SavedJob)
+    private savedJobRepository: Repository<SavedJob>,
+    @InjectRepository(JobSeeker)
+    private jobSeekerRepository: Repository<JobSeeker>,
   ) {}
 
   async findAll(paginationDto: PaginationDto) {
@@ -95,5 +101,140 @@ export class JobPostsService {
     await this.jobPostRepository.save(jobPost);
 
     return { data: jobPost };
+  }
+
+  async saveJob(userId: string, jobPostId: string) {
+    // Get job seeker
+    const jobSeeker = await this.jobSeekerRepository.findOne({
+      where: { user_id: userId },
+    });
+
+    if (!jobSeeker) {
+      throw new NotFoundException('Không tìm thấy hồ sơ người tìm việc');
+    }
+
+    // Check if job post exists
+    const jobPost = await this.jobPostRepository.findOne({
+      where: { job_post_id: jobPostId, status: 'active' },
+    });
+
+    if (!jobPost) {
+      throw new NotFoundException('Không tìm thấy tin tuyển dụng');
+    }
+
+    // Check if already saved
+    const existingSave = await this.savedJobRepository.findOne({
+      where: {
+        job_seeker_id: jobSeeker.job_seeker_id,
+        job_post_id: jobPostId,
+      },
+    });
+
+    if (existingSave) {
+      throw new ConflictException('Bạn đã lưu tin tuyển dụng này rồi');
+    }
+
+    // Create saved job
+    const savedJob = this.savedJobRepository.create({
+      job_seeker_id: jobSeeker.job_seeker_id,
+      job_post_id: jobPostId,
+    });
+    await this.savedJobRepository.save(savedJob);
+
+    // Increment saves count
+    jobPost.saves_count += 1;
+    await this.jobPostRepository.save(jobPost);
+
+    return {
+      message: 'Lưu tin tuyển dụng thành công',
+      data: savedJob,
+    };
+  }
+
+  async unsaveJob(userId: string, jobPostId: string) {
+    const jobSeeker = await this.jobSeekerRepository.findOne({
+      where: { user_id: userId },
+    });
+
+    if (!jobSeeker) {
+      throw new NotFoundException('Không tìm thấy hồ sơ người tìm việc');
+    }
+
+    const savedJob = await this.savedJobRepository.findOne({
+      where: {
+        job_seeker_id: jobSeeker.job_seeker_id,
+        job_post_id: jobPostId,
+      },
+    });
+
+    if (!savedJob) {
+      throw new NotFoundException('Tin tuyển dụng chưa được lưu');
+    }
+
+    await this.savedJobRepository.remove(savedJob);
+
+    // Decrement saves count
+    const jobPost = await this.jobPostRepository.findOne({
+      where: { job_post_id: jobPostId },
+    });
+    if (jobPost && jobPost.saves_count > 0) {
+      jobPost.saves_count -= 1;
+      await this.jobPostRepository.save(jobPost);
+    }
+
+    return { message: 'Bỏ lưu tin tuyển dụng thành công' };
+  }
+
+  async getSavedJobs(userId: string, paginationDto: PaginationDto) {
+    const { page = 1, limit = 10 } = paginationDto;
+    const skip = (page - 1) * limit;
+
+    const jobSeeker = await this.jobSeekerRepository.findOne({
+      where: { user_id: userId },
+    });
+
+    if (!jobSeeker) {
+      throw new NotFoundException('Không tìm thấy hồ sơ người tìm việc');
+    }
+
+    const [data, total] = await this.savedJobRepository.findAndCount({
+      where: { job_seeker_id: jobSeeker.job_seeker_id },
+      relations: ['jobPost', 'jobPost.company', 'jobPost.category'],
+      order: { saved_at: 'DESC' },
+      skip,
+      take: limit,
+    });
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async checkJobSaved(userId: string, jobPostId: string) {
+    const jobSeeker = await this.jobSeekerRepository.findOne({
+      where: { user_id: userId },
+    });
+
+    if (!jobSeeker) {
+      throw new NotFoundException('Không tìm thấy hồ sơ người tìm việc');
+    }
+
+    const savedJob = await this.savedJobRepository.findOne({
+      where: {
+        job_seeker_id: jobSeeker.job_seeker_id,
+        job_post_id: jobPostId,
+      },
+    });
+
+    return {
+      isSaved: !!savedJob,
+      savedAt: savedJob?.saved_at || null,
+    };
   }
 }

@@ -428,7 +428,7 @@ export class AuthService {
 
     const user = await this.userRepository.findOne({
       where: { email },
-      relations: ['roles'],
+      relations: ['roles', 'jobSeeker', 'employer', 'employer.company'],
     });
 
     if (!user) {
@@ -460,6 +460,37 @@ export class AuthService {
       avatar_url = await this.minioService.getFileUrl(user.avatar_url);
     }
 
+    // Get role-specific data
+    let roleData: any = {};
+    const userRole = user.roles[0]?.role_name;
+
+    if (userRole === RoleName.JOBSEEKER && user.jobSeeker) {
+      roleData = {
+        jobSeeker: {
+          job_seeker_id: user.jobSeeker.job_seeker_id,
+          skills: user.jobSeeker.skills,
+          bio: user.jobSeeker.bio,
+          experience: user.jobSeeker.experience,
+          education: user.jobSeeker.education,
+        },
+      };
+    } else if (userRole === RoleName.EMPLOYER && user.employer) {
+      roleData = {
+        employer: {
+          employer_id: user.employer.employer_id,
+          company: user.employer.company ? {
+            company_id: user.employer.company.company_id,
+            name: user.employer.company.name,
+            location: user.employer.company.location,
+            logo_url: user.employer.company.logo_url,
+            description: user.employer.company.description,
+            industry: user.employer.company.industry,
+            website: user.employer.company.website,
+          } : null,
+        },
+      };
+    }
+
     
     return {
       message: 'Đăng nhập thành công',
@@ -470,6 +501,7 @@ export class AuthService {
         phone: user.phone,
         avatar_url,
         roles: user.roles.map(role => role.role_name),
+        ...roleData,
       },
       ...tokens,
     };

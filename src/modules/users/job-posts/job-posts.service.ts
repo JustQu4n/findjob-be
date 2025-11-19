@@ -6,6 +6,7 @@ import { SavedJob } from '@/database/entities/saved-job/saved-job.entity';
 import { JobSeeker } from '@/database/entities/job-seeker/job-seeker.entity';
 import { PaginationDto } from '@/common/dto';
 import { SearchJobPostDto } from './dto';
+import { JobStatus } from '@/common/utils/enums';
 
 @Injectable()
 export class JobPostsService {
@@ -23,7 +24,7 @@ export class JobPostsService {
     const skip = (page - 1) * limit;
 
     const [data, total] = await this.jobPostRepository.findAndCount({
-      where: { status: 'active' },
+      where: { status: JobStatus.ACTIVE },
       relations: ['company', 'category', 'employer'],
       order: { created_at: 'DESC' },
       skip,
@@ -50,7 +51,7 @@ export class JobPostsService {
       .leftJoinAndSelect('job_post.company', 'company')
       .leftJoinAndSelect('job_post.category', 'category')
       .leftJoinAndSelect('job_post.employer', 'employer')
-      .where('job_post.status = :status', { status: 'active' });
+      .where('job_post.status = :status', { status: JobStatus.ACTIVE });
 
     // Search by keyword in title or description
     if (keyword && keyword.trim()) {
@@ -88,7 +89,7 @@ export class JobPostsService {
 
   async findOne(id: string) {
     const jobPost = await this.jobPostRepository.findOne({
-      where: { job_post_id: id, status: 'active' },
+      where: { job_post_id: id, status: JobStatus.ACTIVE },
       relations: ['company', 'category', 'employer', 'employer.user'],
     });
 
@@ -115,7 +116,7 @@ export class JobPostsService {
 
     // Check if job post exists
     const jobPost = await this.jobPostRepository.findOne({
-      where: { job_post_id: jobPostId, status: 'active' },
+      where: { job_post_id: jobPostId, status: JobStatus.ACTIVE },
     });
 
     if (!jobPost) {

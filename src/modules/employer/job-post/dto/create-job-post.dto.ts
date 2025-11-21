@@ -57,6 +57,14 @@ export class CreateJobPostDto {
   @IsNotEmpty()
   description: string;
 
+  @ApiPropertyOptional({
+    description: 'Job requirements (HTML supported from CKEditor)',
+    example: '<p>Requirements: Bachelor degree in Computer Science...</p>',
+  })
+  @IsString()
+  @IsOptional()
+  requirements?: string;
+
   @ApiProperty({
     description: 'City/Location',
     example: 'Ho Chi Minh City',
@@ -106,7 +114,7 @@ export class CreateJobPostDto {
   })
   @IsString()
   @IsNotEmpty()
-  salary: string;
+  salary_range: string;
 
   @ApiPropertyOptional({
     description: 'Gender requirement',
@@ -145,4 +153,12 @@ export class CreateJobPostDto {
   @IsDateString()
   @IsNotEmpty()
   expires_at: string;
+
+  @ApiPropertyOptional({
+    description: 'Application deadline (ISO 8601 format)',
+    example: '2024-12-30T23:59:59.000Z',
+  })
+  @IsDateString()
+  @IsOptional()
+  deadline?: string;
 }

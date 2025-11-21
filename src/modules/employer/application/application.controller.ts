@@ -29,6 +29,15 @@ export class ApplicationController {
     return this.applicationService.findAll(userId, query);
   }
 
+  @Get('job-posts/:jobPostId/applications')
+  getApplicantsByJobPost(
+    @GetUser('user_id') userId: string,
+    @Param('jobPostId') jobPostId: string,
+    @Query() query: QueryApplicationsDto,
+  ) {
+    return this.applicationService.findByJobPost(userId, jobPostId, query);
+  }
+
   @Get('job-posts/:jobPostId/applications/statistics')
   getStatistics(
     @GetUser('user_id') userId: string,

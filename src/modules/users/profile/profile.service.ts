@@ -208,12 +208,15 @@ export class ProfileService {
       }
     }
 
-    // Upload new avatar
-    const avatar_url = await this.minioService.uploadFile(avatar, 'avatars');
+    // Upload new avatar (returns object key like 'avatars/....')
+    const avatarKey = await this.minioService.uploadFile(avatar, 'avatars');
 
-    // Update both jobSeeker and user
-    jobSeeker.avatar_url = avatar_url;
-    jobSeeker.user.avatar_url = avatar_url;
+    // Get a public/presigned URL for frontend and store that URL in DB
+    const publicUrl = await this.minioService.getFileUrl(avatarKey);
+
+    // Update both jobSeeker and user with the public URL so frontend can use it directly
+    jobSeeker.avatar_url = publicUrl;
+    jobSeeker.user.avatar_url = publicUrl;
 
     await this.jobSeekerRepository.save(jobSeeker);
     await this.userRepository.save(jobSeeker.user);
@@ -221,8 +224,8 @@ export class ProfileService {
     return {
       message: 'Cập nhật avatar thành công',
       data: {
-        avatar_url,
-        avatar_download_url: await this.minioService.getFileUrl(avatar_url),
+        avatar_url: publicUrl,
+        avatar_download_url: publicUrl,
       },
     };
   }

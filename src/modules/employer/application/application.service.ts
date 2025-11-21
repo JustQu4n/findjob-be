@@ -413,25 +413,6 @@ export class ApplicationService {
       take: limit,
     });
 
-    // Convert stored avatar keys to downloadable URLs for frontend convenience.
-    for (const app of data) {
-      try {
-        const js = app.jobSeeker;
-        if (!js) continue;
-
-        // Prefer jobSeeker.avatar_url (may be the key); fallback to user.avatar_url
-        const key = js.avatar_url || js.user?.avatar_url;
-        if (!key) continue;
-
-        const url = await this.minioService.getFileUrl(key);
-        // Overwrite jobSeeker.avatar_url with a public/presigned URL so frontend can show it directly
-        js.avatar_url = url;
-      } catch (err) {
-        // Don't block response on failure; log for debugging
-        console.error('Failed to resolve avatar URL for application:', err?.message || err);
-      }
-    }
-
     return createPaginatedResult(data, total, page, limit);
   }
 }

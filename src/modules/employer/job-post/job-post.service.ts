@@ -52,11 +52,12 @@ export class JobPostService {
       title: createJobPostDto.title,
       industries: createJobPostDto.industries,
       description: createJobPostDto.description,
+      requirements: createJobPostDto.requirements,
       location: createJobPostDto.location,
       address: createJobPostDto.address,
       experience: createJobPostDto.experience,
       level: createJobPostDto.level,
-      salary_range: createJobPostDto.salary,
+      salary_range: createJobPostDto.salary_range,
       gender: createJobPostDto.gender,
       job_type: createJobPostDto.job_type,
       status: createJobPostDto.status,
@@ -67,6 +68,10 @@ export class JobPostService {
 
     if (createJobPostDto.expires_at) {
       jobPost.expires_at = new Date(createJobPostDto.expires_at);
+    }
+
+    if (createJobPostDto.deadline) {
+      jobPost.deadline = new Date(createJobPostDto.deadline);
     }
 
     const savedJobPost = await this.jobPostRepository.save(jobPost);

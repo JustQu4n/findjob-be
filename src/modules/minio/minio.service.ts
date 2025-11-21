@@ -83,6 +83,29 @@ export class MinioService {
    */
   async getFileUrl(fileName: string): Promise<string> {
     try {
+      // If the stored value is already a full URL, return it directly
+      if (!fileName) {
+        throw new Error('fileName is required');
+      }
+
+      if (fileName.startsWith('http://') || fileName.startsWith('https://')) {
+        return fileName;
+      }
+
+      // If a public URL is configured, construct a stable public URL instead of a presigned one.
+      const publicBase = this.configService.get<string>('MINIO_PUBLIC_URL');
+      const includeBucketInPath = this.configService.get<string>('MINIO_PUBLIC_BUCKET_IN_PATH', 'true') === 'true';
+
+      if (publicBase) {
+        const cleanedBase = publicBase.replace(/\/$/, '');
+        const cleanedFile = fileName.replace(/^\//, '');
+        const url = includeBucketInPath
+          ? `${cleanedBase}/${this.bucketName}/${cleanedFile}`
+          : `${cleanedBase}/${cleanedFile}`;
+        return url;
+      }
+
+      // Fallback: generate a presigned URL valid for 7 days
       return await this.minioClient.presignedGetObject(
         this.bucketName,
         fileName,

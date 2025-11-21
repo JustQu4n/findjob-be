@@ -123,7 +123,40 @@ export class MinioService {
    */
   async deleteFile(fileName: string): Promise<void> {
     try {
-      await this.minioClient.removeObject(this.bucketName, fileName);
+      // Normalize input: accept either stored object key (e.g. "avatars/..")
+      // or a full public/presigned URL. If given a URL, extract the object
+      // key portion so MinIO client can remove the object correctly.
+      let objectKey = fileName;
+
+      if (!objectKey) {
+        throw new Error('fileName is required');
+      }
+
+      if (objectKey.startsWith('http://') || objectKey.startsWith('https://')) {
+        try {
+          const parsed = new URL(objectKey);
+          // parsed.pathname is like '/bucketName/path/to/object' or '/path/to/object'
+          let pathname = parsed.pathname.replace(/^\/+/,'');
+          const includeBucketInPath = this.configService.get<string>('MINIO_PUBLIC_BUCKET_IN_PATH', 'true') === 'true';
+
+          if (includeBucketInPath) {
+            // If bucket name is present at the start of the public URL path, strip it
+            if (pathname.startsWith(`${this.bucketName}/`)) {
+              pathname = pathname.substring(this.bucketName.length + 1);
+            }
+          }
+
+          objectKey = pathname;
+        } catch (err) {
+          // If URL parsing fails, fallback to original value (may still fail removeObject)
+          objectKey = fileName;
+        }
+      } else {
+        // Ensure no leading slash
+        objectKey = objectKey.replace(/^\/+/, '');
+      }
+
+      await this.minioClient.removeObject(this.bucketName, objectKey);
     } catch (error) {
       throw new BadRequestException(`Lỗi khi xóa file: ${error.message}`);
     }

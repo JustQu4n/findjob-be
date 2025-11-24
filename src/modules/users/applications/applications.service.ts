@@ -82,9 +82,11 @@ export class ApplicationsService {
       }
 
       console.log('File validation passed, uploading to MinIO...');
-      // Upload to MinIO
-      resumeUrl = await this.minioService.uploadFile(file, 'resumes');
-      console.log('File uploaded successfully, URL:', resumeUrl);
+        // Upload to MinIO (returns object key like 'resumes/...')
+        const resumeKey = await this.minioService.uploadFile(file, 'resumes');
+        // Convert to a public/presigned URL and store that in DB so frontend can access directly
+        resumeUrl = await this.minioService.getFileUrl(resumeKey);
+        console.log('File uploaded successfully, stored resume URL:', resumeUrl);
     }
 
     // Tạo application

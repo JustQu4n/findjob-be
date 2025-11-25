@@ -9,6 +9,7 @@ import {
   HttpStatus,
   UseInterceptors,
   UploadedFile,
+  Req,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthService } from './auth.service';
@@ -86,12 +87,14 @@ export class AuthController {
     return this.authService.login(loginDto);
   }
 
-  @Public()
   @Post('refresh')
   @UseGuards(JwtRefreshAuthGuard)
   @HttpCode(HttpStatus.OK)
-  async refreshToken(@GetUser() user: User) {
-    return this.authService.refreshToken(user);
+  async refreshToken(@GetUser() payload: any, @Req() req: any) {
+    // Extract refresh token from request (strategy also extracts it and
+    // attaches to payload) — support either body or HttpOnly cookie.
+    const refreshToken = req.body?.refreshToken || req.cookies?.refreshToken || payload.refreshToken;
+    return this.authService.refreshTokens(payload.sub, refreshToken);
   }
 
   @UseGuards(JwtAuthGuard)

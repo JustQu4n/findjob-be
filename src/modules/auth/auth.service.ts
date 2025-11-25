@@ -439,8 +439,9 @@ export class AuthService {
 
     const tokens = await this.generateTokens(user);
 
-    // Save refresh token
-    user.refresh_token = tokens.refreshToken;
+    // Save refresh token (hashed)
+    const hashedRefresh = await bcrypt.hash(tokens.refreshToken, 10);
+    user.refresh_token = hashedRefresh;
     await this.userRepository.save(user);
 
     // Get avatar URL if exists
@@ -510,10 +511,29 @@ export class AuthService {
     return null;
   }
 
-  async refreshToken(user: User) {
+  async refreshTokens(userId: string, refreshToken: string) {
+    if (!refreshToken) {
+      throw new BadRequestException('Refresh token is required');
+    }
+
+    const user = await this.userRepository.findOne({
+      where: { user_id: userId },
+      relations: ['roles'],
+    });
+
+    if (!user || !user.refresh_token) {
+      throw new UnauthorizedException('Access denied');
+    }
+
+    const isValid = await bcrypt.compare(refreshToken, user.refresh_token);
+    if (!isValid) {
+      throw new UnauthorizedException('Refresh token không hợp lệ');
+    }
+
     const tokens = await this.generateTokens(user);
-    
-    user.refresh_token = tokens.refreshToken;
+
+    // Store new refresh token (hashed)
+    user.refresh_token = await bcrypt.hash(tokens.refreshToken, 10);
     await this.userRepository.save(user);
 
     return {

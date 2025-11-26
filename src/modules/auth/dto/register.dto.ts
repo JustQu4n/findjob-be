@@ -28,6 +28,10 @@ export class RegisterDto {
   @Matches(/^[0-9]{10,11}$/, { message: 'Số điện thoại không hợp lệ' })
   phone?: string;
 
+  @IsOptional()
+  @IsString()
+  address?: string;
+
   @IsNotEmpty({ message: 'Vai trò không được để trống' })
   @IsEnum(UserRole, { message: 'Vai trò không hợp lệ' })
   role: UserRole;

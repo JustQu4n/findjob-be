@@ -13,17 +13,20 @@ import { JobPost } from '../job-post/job-post.entity';
 
 @Entity('employers')
 export class Employer {
-  @PrimaryGeneratedColumn()
-  employer_id: number;
+  @PrimaryGeneratedColumn('uuid')
+  employer_id: string;
 
-  @Column({ unique: true })
-  user_id: number;
+  @Column({ type: 'uuid', unique: true })
+  user_id: string;
 
-  @Column({ nullable: true })
-  company_id: number;
+  @Column({ type: 'uuid', nullable: true })
+  company_id: string;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
   position: string;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  avatar_url: string;
 
   // Relationships
   @OneToOne(() => User, (user) => user.employer)

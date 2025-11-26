@@ -5,9 +5,11 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like } from 'typeorm';
+import { Repository, Like, In } from 'typeorm';
 import { JobPost } from 'src/database/entities/job-post/job-post.entity';
 import { Employer } from 'src/database/entities/employer/employer.entity';
+import { Skill } from 'src/database/entities/skill/skill.entity';
+import { JobPostSkill } from 'src/database/entities/job-post-skill/job-post-skill.entity';
 import { CreateJobPostDto, UpdateJobPostDto, QueryJobPostDto } from './dto';
 import { PaginatedResult, PaginationMeta } from 'src/common/dto';
 import { createPaginatedResult, calculateSkip } from 'src/common/utils/helpers';
@@ -19,12 +21,16 @@ export class JobPostService {
     private jobPostRepository: Repository<JobPost>,
     @InjectRepository(Employer)
     private employerRepository: Repository<Employer>,
+    @InjectRepository(Skill)
+    private skillRepository: Repository<Skill>,
+    @InjectRepository(JobPostSkill)
+    private jobPostSkillRepository: Repository<JobPostSkill>,
   ) {}
 
   /**
    * Tạo job post mới
    */
-  async create(userId: number, createJobPostDto: CreateJobPostDto) {
+  async create(userId: string, createJobPostDto: CreateJobPostDto) {
     // Tìm employer từ user_id
     const employer = await this.employerRepository.findOne({
       where: { user_id: userId },
@@ -44,21 +50,39 @@ export class JobPostService {
     // Tạo job post
     const jobPost = this.jobPostRepository.create({
       title: createJobPostDto.title,
+      industries: createJobPostDto.industries,
       description: createJobPostDto.description,
       requirements: createJobPostDto.requirements,
-      salary_range: createJobPostDto.salary_range,
       location: createJobPostDto.location,
-      employment_type: createJobPostDto.employment_type,
+      address: createJobPostDto.address,
+      experience: createJobPostDto.experience,
+      level: createJobPostDto.level,
+      salary_range: createJobPostDto.salary_range,
+      gender: createJobPostDto.gender,
+      job_type: createJobPostDto.job_type,
+      status: createJobPostDto.status,
     });
 
     jobPost.employer_id = employer.employer_id;
     jobPost.company_id = employer.company_id;
-    
+
+    if (createJobPostDto.expires_at) {
+      jobPost.expires_at = new Date(createJobPostDto.expires_at);
+    }
+
     if (createJobPostDto.deadline) {
       jobPost.deadline = new Date(createJobPostDto.deadline);
     }
 
     const savedJobPost = await this.jobPostRepository.save(jobPost);
+
+    // Xử lý skills
+    if (createJobPostDto.skills && createJobPostDto.skills.length > 0) {
+      await this.handleJobPostSkills(
+        savedJobPost.job_post_id,
+        createJobPostDto.skills,
+      );
+    }
 
     return {
       message: 'Tạo tin tuyển dụng thành công',
@@ -70,7 +94,7 @@ export class JobPostService {
    * Lấy toàn bộ job posts của employer với phân trang (không filter)
    */
   async findAll(
-    userId: number,
+    userId: string,
     query: QueryJobPostDto,
   ): Promise<PaginatedResult<JobPost>> {
     
@@ -104,7 +128,7 @@ export class JobPostService {
   /**
    * Lấy chi tiết một job post
    */
-  async findOne(userId: number, jobPostId: number) {
+  async findOne(userId: string, jobPostId: string) {
     const employer = await this.employerRepository.findOne({
       where: { user_id: userId },
     });
@@ -131,8 +155,8 @@ export class JobPostService {
    * Cập nhật job post
    */
   async update(
-    userId: number,
-    jobPostId: number,
+    userId: string,
+    jobPostId: string,
     updateJobPostDto: UpdateJobPostDto,
   ) {
     const employer = await this.employerRepository.findOne({
@@ -159,13 +183,39 @@ export class JobPostService {
     }
 
     // Update fields
-    Object.assign(jobPost, updateJobPostDto);
+    if (updateJobPostDto.title) jobPost.title = updateJobPostDto.title;
+    if (updateJobPostDto.industries)
+      jobPost.industries = updateJobPostDto.industries;
+    if (updateJobPostDto.description)
+      jobPost.description = updateJobPostDto.description;
+    if (updateJobPostDto.requirements)
+      jobPost.requirements = updateJobPostDto.requirements;
+    if (updateJobPostDto.location)
+      jobPost.location = updateJobPostDto.location;
+    if (updateJobPostDto.address) jobPost.address = updateJobPostDto.address;
+    if (updateJobPostDto.experience)
+      jobPost.experience = updateJobPostDto.experience;
+    if (updateJobPostDto.level) jobPost.level = updateJobPostDto.level;
+    if (updateJobPostDto.salary_range)
+      jobPost.salary_range = updateJobPostDto.salary_range;
+    if (updateJobPostDto.gender) jobPost.gender = updateJobPostDto.gender;
+    if (updateJobPostDto.job_type) jobPost.job_type = updateJobPostDto.job_type;
+    if (updateJobPostDto.status) jobPost.status = updateJobPostDto.status;
 
     if (updateJobPostDto.deadline) {
       jobPost.deadline = new Date(updateJobPostDto.deadline);
     }
 
+    if (updateJobPostDto.expires_at) {
+      jobPost.expires_at = new Date(updateJobPostDto.expires_at);
+    }
+
     await this.jobPostRepository.save(jobPost);
+
+    // Xử lý skills nếu có
+    if (updateJobPostDto.skills) {
+      await this.handleJobPostSkills(jobPostId, updateJobPostDto.skills);
+    }
 
     return {
       message: 'Cập nhật tin tuyển dụng thành công',
@@ -176,7 +226,7 @@ export class JobPostService {
   /**
    * Xóa job post
    */
-  async remove(userId: number, jobPostId: number) {
+  async remove(userId: string, jobPostId: string) {
     const employer = await this.employerRepository.findOne({
       where: { user_id: userId },
     });
@@ -210,7 +260,7 @@ export class JobPostService {
   /**
    * Lấy thống kê job posts của employer
    */
-  async getStatistics(userId: number) {
+  async getStatistics(userId: string) {
     const employer = await this.employerRepository.findOne({
       where: { user_id: userId },
     });
@@ -260,7 +310,7 @@ export class JobPostService {
   /**
    * Debug: Lấy thông tin employer
    */
-  async getEmployerInfo(userId: number) {
+  async getEmployerInfo(userId: string) {
     const employer = await this.employerRepository.findOne({
       where: { user_id: userId },
       relations: ['user', 'company'],
@@ -286,10 +336,17 @@ export class JobPostService {
   /**
    * Helper: Tìm job post theo ID với relations
    */
-  private async findOneById(jobPostId: number): Promise<JobPost> {
+  private async findOneById(jobPostId: string): Promise<JobPost> {
     const jobPost = await this.jobPostRepository.findOne({
       where: { job_post_id: jobPostId },
-      relations: ['company', 'employer', 'employer.user'],
+      relations: [
+        'company',
+        'employer',
+        'employer.user',
+        'category',
+        'jobPostSkills',
+        'jobPostSkills.skill',
+      ],
     });
 
     if (!jobPost) {
@@ -297,5 +354,45 @@ export class JobPostService {
     }
 
     return jobPost;
+  }
+
+  /**
+   * Helper: Xử lý skills cho job post
+   */
+  private async handleJobPostSkills(
+    jobPostId: string,
+    skillNames: string[],
+  ): Promise<void> {
+    // Xóa các skills cũ
+    await this.jobPostSkillRepository.delete({ job_post_id: jobPostId });
+
+    if (!skillNames || skillNames.length === 0) {
+      return;
+    }
+
+    // Tìm hoặc tạo skills
+    const skills: Skill[] = [];
+    for (const skillName of skillNames) {
+      let skill = await this.skillRepository.findOne({
+        where: { name: skillName.trim() },
+      });
+
+      if (!skill) {
+        skill = this.skillRepository.create({ name: skillName.trim() });
+        skill = await this.skillRepository.save(skill);
+      }
+
+      skills.push(skill);
+    }
+
+    // Tạo job post skills
+    const jobPostSkills = skills.map((skill) =>
+      this.jobPostSkillRepository.create({
+        job_post_id: jobPostId,
+        skill_id: skill.id,
+      }),
+    );
+
+    await this.jobPostSkillRepository.save(jobPostSkills);
   }
 }

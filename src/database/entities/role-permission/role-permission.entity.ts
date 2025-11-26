@@ -10,11 +10,11 @@ import { Permission } from '../permission/permission.entity';
 
 @Entity('role_permissions')
 export class RolePermission {
-  @PrimaryColumn()
-  role_id: number;
+  @PrimaryColumn({ type: 'uuid' })
+  role_id: string;
 
-  @PrimaryColumn()
-  permission_id: number;
+  @PrimaryColumn({ type: 'uuid' })
+  permission_id: string;
 
   // Relationships
   @ManyToOne(() => Role, { onDelete: 'CASCADE' })

@@ -1,37 +1,29 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { User } from 'src/database/entities/user/user.entity';
 
 @Injectable()
 export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh') {
-  constructor(
-    private configService: ConfigService,
-    @InjectRepository(User)
-    private userRepository: Repository<User>,
-  ) {
+  constructor(private configService: ConfigService) {
     super({
-      jwtFromRequest: ExtractJwt.fromBodyField('refreshToken'),
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        (req: any) => {
+          if (!req) return null;
+          // Prefer body field, fallback to cookie (HttpOnly cookie named 'refreshToken')
+          return req.body?.refreshToken || req.cookies?.refreshToken || null;
+        },
+      ]),
       ignoreExpiration: false,
       secretOrKey: configService.get<string>('JWT_REFRESH_SECRET') || 'careervibe-refresh-secret-2024',
       passReqToCallback: true,
     });
   }
 
-  async validate(req: any, payload: any): Promise<User> {
-    const refreshToken = req.body.refreshToken;
-    const user = await this.userRepository.findOne({
-      where: { user_id: payload.sub },
-      relations: ['roles'],
-    });
-
-    if (!user || user.refresh_token !== refreshToken) {
-      throw new UnauthorizedException('Refresh token không hợp lệ');
-    }
-
-    return user;
+  // Return the payload plus the extracted refresh token. Actual validation
+  // (compare with stored hashed token) will be performed inside AuthService.
+  async validate(req: any, payload: any): Promise<any> {
+    const refreshToken = req.body?.refreshToken || req.cookies?.refreshToken;
+    return { ...payload, refreshToken };
   }
 }

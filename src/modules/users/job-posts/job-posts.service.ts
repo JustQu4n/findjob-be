@@ -238,4 +238,54 @@ export class JobPostsService {
       savedAt: savedJob?.saved_at || null,
     };
   }
+
+  /**
+   * Find related job posts for a given job post id.
+   * Strategy: prefer same category, then same company or location. Exclude the current post.
+   */
+  async getRelated(jobPostId: string, limit = 5) {
+    const jobPost = await this.jobPostRepository.findOne({
+      where: { job_post_id: jobPostId, status: JobStatus.ACTIVE },
+    });
+
+    if (!jobPost) {
+      throw new NotFoundException('Không tìm thấy tin tuyển dụng');
+    }
+
+    // Try to find posts in same category first
+    const qb = this.jobPostRepository.createQueryBuilder('job_post')
+      .leftJoinAndSelect('job_post.company', 'company')
+      .leftJoinAndSelect('job_post.category', 'category')
+      .leftJoinAndSelect('job_post.employer', 'employer')
+      .where('job_post.status = :status', { status: JobStatus.ACTIVE })
+      .andWhere('job_post.job_post_id != :id', { id: jobPostId })
+      .orderBy('job_post.created_at', 'DESC')
+      .take(limit);
+
+    if (jobPost.category_id) {
+      qb.andWhere('job_post.category_id = :catId', { catId: jobPost.category_id });
+      const data = await qb.getMany();
+      if (data.length > 0) return { data };
+    }
+
+    // Fallback: same company or same location
+    const qb2 = this.jobPostRepository.createQueryBuilder('job_post')
+      .leftJoinAndSelect('job_post.company', 'company')
+      .leftJoinAndSelect('job_post.category', 'category')
+      .leftJoinAndSelect('job_post.employer', 'employer')
+      .where('job_post.status = :status', { status: JobStatus.ACTIVE })
+      .andWhere('job_post.job_post_id != :id', { id: jobPostId })
+      .orderBy('job_post.created_at', 'DESC')
+      .take(limit)
+      .andWhere('(job_post.company_id = :companyId OR LOWER(job_post.location) = LOWER(:location))', {
+        companyId: jobPost.company_id,
+        location: jobPost.location || '',
+      });
+
+    const fallback = await qb2.getMany();
+    return { 
+      success: true,
+      data: fallback 
+    };
+  }
 }

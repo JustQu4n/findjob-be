@@ -44,6 +44,17 @@ export class JobPostsController {
     return this.jobPostsService.findOne(id);
   }
 
+  @Public()
+  @Get('job-posts/:id/related')
+  @HttpCode(HttpStatus.OK)
+  async getRelated(
+    @Param('id') id: string,
+    @Query('limit') limit?: number,
+  ) {
+    const l = limit ? Number(limit) : 5;
+    return this.jobPostsService.getRelated(id, l);
+  }
+
   // Saved Jobs endpoints
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('jobseeker')

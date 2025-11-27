@@ -75,4 +75,31 @@ export class CompanyService {
       data: company,
     };
   }
+
+  async getCompanyByUserId(userId: string) {
+    // Find employer by user_id and include company relation
+    const employer = await this.employerRepository.findOne({
+      where: { user_id: userId },
+      relations: ['company'],
+    });
+
+    if (!employer) {
+      throw new NotFoundException('Không tìm thấy nhà tuyển dụng');
+    }
+
+    if (!employer.company) {
+      throw new NotFoundException('Người dùng chưa liên kết với công ty nào');
+    }
+
+    // Return company details
+    const company = await this.companyRepository.findOne({
+      where: { company_id: employer.company.company_id },
+    });
+
+    if (!company) {
+      throw new NotFoundException('Không tìm thấy công ty');
+    }
+
+    return { data: company };
+  }
 }

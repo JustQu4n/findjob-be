@@ -27,6 +27,13 @@ export class CompanyController {
     return this.companyService.getCompanyJobPosts(companyId);
   }
 
+  @Public()
+  @Get('detail-company/:user_id')
+  @HttpCode(HttpStatus.OK)
+  async getCompanyByUserId(@Param('user_id') userId: string) {
+    return this.companyService.getCompanyByUserId(userId);
+  }
+
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('employer')
   @Put(':company_id')

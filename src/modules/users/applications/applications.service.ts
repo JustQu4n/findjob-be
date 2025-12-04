@@ -11,6 +11,8 @@ import { Application } from 'src/database/entities/application/application.entit
 import { JobSeeker } from 'src/database/entities/job-seeker/job-seeker.entity';
 import { JobPost } from 'src/database/entities/job-post/job-post.entity';
 import { MinioService } from 'src/modules/minio/minio.service';
+import { NotificationsService } from 'src/modules/notifications/notifications.service';
+import { NotificationType } from '@/common/utils/enums/notification-type.enum';
 import { SubmitApplicationDto } from './dto';
 
 @Injectable()
@@ -23,6 +25,7 @@ export class ApplicationsService {
     @InjectRepository(JobPost)
     private jobPostRepository: Repository<JobPost>,
     private minioService: MinioService,
+    private notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -42,9 +45,10 @@ export class ApplicationsService {
       throw new NotFoundException('Không tìm thấy thông tin người tìm việc');
     }
 
-    // Kiểm tra job post tồn tại
+    // Kiểm tra job post tồn tại (load employer to notify)
     const jobPost = await this.jobPostRepository.findOne({
       where: { job_post_id: dto.job_post_id },
+      relations: ['employer', 'employer.user'],
     });
 
     if (!jobPost) {
@@ -99,6 +103,26 @@ export class ApplicationsService {
 
     await this.applicationRepository.save(application);
 
+    // Notify employer about new application (if employer exists)
+    try {
+      const employerUserId = jobPost?.employer?.user?.user_id;
+      if (employerUserId) {
+        await this.notificationsService.sendToUser(employerUserId, {
+          type: NotificationType.NEW_APPLICATION,
+          message: `Bạn có ứng viên mới cho tin: ${jobPost.title || ''}`,
+          metadata: { application_id: application.application_id, job_post_id: jobPost.job_post_id },
+        });
+      }
+
+      // Confirmation for job seeker
+      await this.notificationsService.sendToUser(jobSeeker.user_id, {
+        type: NotificationType.APPLICATION_SUBMITTED,
+        message: `Bạn đã nộp đơn thành công cho vị trí: ${jobPost.title || ''}`,
+        metadata: { application_id: application.application_id, job_post_id: jobPost.job_post_id },
+      });
+    } catch (err) {
+      console.error('Failed to send notifications for application:', err?.message || err);
+    }
     return {
       message: 'Nộp đơn ứng tuyển thành công',
       data: await this.applicationRepository.findOne({

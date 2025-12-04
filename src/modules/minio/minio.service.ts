@@ -105,11 +105,16 @@ export class MinioService {
         return url;
       }
 
-      // Fallback: generate a presigned URL valid for 7 days
+      // Fallback: generate a presigned URL. Expiration is configurable via
+      // MINIO_PRESIGNED_EXPIRES (in seconds). Default: 7 days.
+      const defaultExpiry = 7 * 24 * 60 * 60; // 7 days in seconds
+      const configured = parseInt(this.configService.get<string>('MINIO_PRESIGNED_EXPIRES') || '', 10);
+      const expires = Number.isFinite(configured) && configured > 0 ? configured : defaultExpiry;
+
       return await this.minioClient.presignedGetObject(
         this.bucketName,
         fileName,
-        7 * 24 * 60 * 60, // URL valid for 7 days
+        expires,
       );
     } catch (error) {
       throw new BadRequestException(

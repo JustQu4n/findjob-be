@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from 'src/database/entities/notification/notification.entity';
@@ -55,6 +55,22 @@ export class NotificationsService {
     if (!notif) return null;
     notif.is_read = true;
     return this.notificationRepository.save(notif);
+  }
+
+  // Mark as read only if the notification belongs to the given user
+  async markAsReadByUser(notificationId: string, userId: string) {
+    const notif = await this.notificationRepository.findOne({ where: { id: notificationId } });
+    if (!notif) {
+      throw new NotFoundException('Notification not found');
+    }
+    if (notif.user_id !== userId) {
+      throw new ForbiddenException('Not allowed to modify this notification');
+    }
+    if (!notif.is_read) {
+      notif.is_read = true;
+      return this.notificationRepository.save(notif);
+    }
+    return notif;
   }
 
   // List notifications for a user with simple pagination

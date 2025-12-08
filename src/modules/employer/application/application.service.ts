@@ -19,6 +19,7 @@ import { createPaginatedResult, calculateSkip } from 'src/common/utils/helpers';
 import { ApplicationStatus } from 'src/common/utils/enums';
 import { EmailService } from 'src/modules/email/email.service';
 import { MinioService } from 'src/modules/minio/minio.service';
+import { NotificationsService } from 'src/modules/notifications/notifications.service';
 
 @Injectable()
 export class ApplicationService {
@@ -31,6 +32,7 @@ export class ApplicationService {
     private jobPostRepository: Repository<JobPost>,
     private emailService: EmailService,
     private minioService: MinioService,
+    private notificationsService: NotificationsService,
   ) {}
 
 
@@ -250,6 +252,20 @@ export class ApplicationService {
     } catch (err) {
       // Don't block the request if email fails; log for debugging
       console.error('Failed to send application status email', err);
+    }
+
+    // Send realtime notification to job seeker
+    try {
+      const jobSeekerUserId = fullApp?.jobSeeker?.user?.user_id;
+      if (jobSeekerUserId) {
+        await this.notificationsService.sendToUser(jobSeekerUserId, {
+          type: 'application_status_updated',
+          message: `Trạng thái hồ sơ của bạn đã được cập nhật: ${String(fullApp.status)}`,
+          metadata: { application_id: fullApp.application_id, status: fullApp.status },
+        });
+      }
+    } catch (err) {
+      console.error('Failed to send realtime notification for status update', err?.message || err);
     }
 
     return {

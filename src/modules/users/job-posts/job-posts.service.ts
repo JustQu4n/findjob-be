@@ -90,7 +90,14 @@ export class JobPostsService {
   async findOne(id: string) {
     const jobPost = await this.jobPostRepository.findOne({
       where: { job_post_id: id, status: JobStatus.ACTIVE },
-      relations: ['company', 'category', 'employer', 'employer.user'],
+      relations: [
+        'company',
+        'category',
+        'employer',
+        'employer.user',
+        'jobPostSkills',
+        'jobPostSkills.skill',
+      ],
     });
 
     if (!jobPost) {
@@ -101,7 +108,22 @@ export class JobPostsService {
     jobPost.views_count += 1;
     await this.jobPostRepository.save(jobPost);
 
-    return { data: jobPost };
+    // Map skills from jobPostSkills relation to a simple array
+    const skills = (jobPost.jobPostSkills || []).map((jps) => {
+      return jps?.skill
+        ? {
+            id: jps.skill.id,
+            name: jps.skill.name,
+          }
+        : null;
+    }).filter(Boolean);
+
+    const result = {
+      ...jobPost,
+      skills,
+    };
+
+    return { data: result };
   }
 
   async saveJob(userId: string, jobPostId: string) {

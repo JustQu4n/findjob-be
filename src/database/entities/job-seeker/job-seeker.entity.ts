@@ -35,11 +35,23 @@ export class JobSeeker {
   @Column({ type: 'text', nullable: true })
   bio: string;
 
-  @Column({ type: 'text', nullable: true })
-  experience: string;
+  @Column({ type: 'int', nullable: true })
+  experience: number;
 
   @Column({ type: 'text', nullable: true })
   education: string;
+
+  @Column({ type: 'jsonb', nullable: true })
+  preferred_locations: string[];
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  preferred_job_level: string;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  preferred_job_type: string;
+
+  @Column({ type: 'int', nullable: true })
+  expected_salary: number;
 
   // Relationships
   @OneToOne(() => User, (user) => user.jobSeeker)

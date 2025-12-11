@@ -2,6 +2,8 @@ import { Body, Controller, Post, Get, Delete, Query, UseGuards } from '@nestjs/c
 import { AiAssistantService } from './ai-assistant.service';
 import { ChatWithGeminiDto } from './dto/chat-with-gemini.dto';
 import { ChatResponseDto } from './dto/chat-response.dto';
+import { SummarizeJdDto } from './dto/summarize-jd.dto';
+import { JdSummaryResponseDto } from './dto/jd-summary-response.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { Public } from '../../common/decorators/public.decorator';
 import { GetUser } from '../../common/decorators/get-user.decorator';
@@ -87,5 +89,15 @@ export class AiAssistantController {
   async getChatStatistics() {
     // TODO: Add admin role check here
     return this.aiService.getChatStatistics();
+  }
+
+  @Post('summarize-jd')
+  @UseGuards(JwtAuthGuard)
+  async summarizeJobDescription(
+    @Body() summarizeDto: SummarizeJdDto,
+    @GetUser() user: User,
+  ): Promise<JdSummaryResponseDto> {
+    const userId = user.user_id;
+    return this.aiService.summarizeJobDescription(summarizeDto, userId);
   }
 }

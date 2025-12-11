@@ -5,6 +5,8 @@ import { Repository } from 'typeorm';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { ChatWithGeminiDto } from './dto/chat-with-gemini.dto';
 import { ChatResponseDto } from './dto/chat-response.dto';
+import { SummarizeJdDto } from './dto/summarize-jd.dto';
+import { JdSummaryResponseDto } from './dto/jd-summary-response.dto';
 import { AiChatHistory } from '../../database/entities/ai-chat-history/ai-chat-history.entity';
 
 @Injectable()
@@ -120,6 +122,13 @@ hãy lịch sự nhắc người dùng rằng bạn được thiết kế để 
     } catch (error) {
       this.logger.error('Error communicating with Gemini AI:', error);
       
+      // Handle quota limit (429 Too Many Requests)
+      if (error.status === 429) {
+        throw new BadRequestException(
+          'Đã vượt quá giới hạn sử dụng API miễn phí (20 requests/ngày). Vui lòng thử lại sau hoặc nâng cấp API key.',
+        );
+      }
+      
       // If it's an API key issue, provide helpful message
       if (error.message && error.message.includes('API_KEY_INVALID')) {
         throw new BadRequestException(
@@ -163,7 +172,7 @@ hãy lịch sự nhắc người dùng rằng bạn được thiết kế để 
   ): Promise<AiChatHistory[]> {
     return this.chatHistoryRepository.find({
       where: { userId },
-      order: { createdAt: 'DESC' },
+      order: { createdAt: 'ASC' },
       take: limit,
     });
   }
@@ -222,5 +231,104 @@ hãy lịch sự nhắc người dùng rằng bạn được thiết kế để 
       today: todayCount,
       byUserType,
     };
+  }
+
+  /**
+   * Summarize Job Description with language detection
+   */
+  async summarizeJobDescription(
+    summarizeDto: SummarizeJdDto,
+    userId: string,
+  ): Promise<JdSummaryResponseDto> {
+    if (!this.genAI) {
+      throw new BadRequestException(
+        'Gemini AI is not configured. Please set GEMINI_API_KEY in environment variables.',
+      );
+    }
+
+    try {
+      const modelName = 'gemini-2.5-flash';
+      const model = this.genAI.getGenerativeModel({ model: modelName });
+
+      // Optimized prompt for JD summarization - concise description, complete content, list format
+      const prompt = `You will be given a job description (JD) in either English or Vietnamese.  
+              Your task is to:
+              1. Detect the language of the JD.
+              2. Summarize the job in the **same language** as the JD.
+              3. Include only the most **important information**, such as:
+                - Job title / position
+                - Main responsibilities
+                - Required skills
+                - Required experience
+                - Location (if available)
+                - Salary range (if available)
+              4. Present the summary in a **clear and organized** manner, preferably in bullet points.
+
+              Keep the summary **short (about 3–5 bullet points or 5–7 lines)** and **easy to understand**. Avoid repeating unnecessary details.
+              And no break lines in the summary.
+
+              === JD START ===
+              ${summarizeDto.jobDescription}
+              === JD END ===
+              `;
+
+      this.logger.log(`Summarizing Job Description for user: ${userId}`);
+
+      const result = await model.generateContent(prompt);
+      const response = result.response;
+      const text = response.text();
+
+      // Parse JSON response
+      let parsedResponse;
+      try {
+        // Clean the response text (remove markdown code blocks if present)
+        const cleanedText = text
+          .replace(/```json\n?/g, '')
+          .replace(/```\n?/g, '')
+          .trim();
+        parsedResponse = JSON.parse(cleanedText);
+      } catch (parseError) {
+        this.logger.error('Failed to parse AI response as JSON:', parseError);
+        // Fallback: return raw text
+        parsedResponse = {
+          detectedLanguage: 'Unknown',
+          summary: text,
+          position: 'N/A',
+          company: 'N/A',
+          keyInformation: {},
+        };
+      }
+
+      this.logger.log(
+        `JD summarization completed. Language: ${parsedResponse.detectedLanguage}`,
+      );
+
+      return new JdSummaryResponseDto(
+        parsedResponse.summary,
+        parsedResponse.detectedLanguage,
+        parsedResponse.position,
+        parsedResponse.company,
+        parsedResponse.keyInformation,
+      );
+    } catch (error) {
+      this.logger.error('Error summarizing Job Description:', error);
+
+      // Handle quota limit (429 Too Many Requests)
+      if (error.status === 429) {
+        throw new BadRequestException(
+          'Đã vượt quá giới hạn sử dụng API miễn phí (20 requests/ngày). Vui lòng thử lại sau hoặc nâng cấp API key. Chi tiết: https://ai.google.dev/gemini-api/docs/rate-limits',
+        );
+      }
+
+      if (error.message && error.message.includes('API_KEY_INVALID')) {
+        throw new BadRequestException(
+          'Invalid Gemini API Key. Please check your GEMINI_API_KEY in .env file.',
+        );
+      }
+
+      throw new BadRequestException(
+        `Failed to summarize Job Description: ${error.message}`,
+      );
+    }
   }
 }

@@ -4,6 +4,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { EmployerModule } from './modules/employer/employer.module';
 import { UsersModule } from './modules/users/users.module';
 import { DatabaseModule } from './database/database.module';
+import { AiAssistantModule } from './modules/ai-assistant/ai-assistant.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { DatabaseModule } from './database/database.module';
     UsersModule,
     AuthModule,
     DatabaseModule,
+    AiAssistantModule,
   ],
   controllers: [],
   providers: [],

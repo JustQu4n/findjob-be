@@ -20,3 +20,4 @@ export * from './entities/user-skill/user-skill.entity';
 export * from './entities/education/education.entity';
 export * from './entities/project/project.entity';
 export * from './entities/notification/notification.entity';
+export * from './entities/ai-chat-history/ai-chat-history.entity';

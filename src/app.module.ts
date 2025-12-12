@@ -5,6 +5,7 @@ import { EmployerModule } from './modules/employer/employer.module';
 import { UsersModule } from './modules/users/users.module';
 import { DatabaseModule } from './database/database.module';
 import { AiAssistantModule } from './modules/ai-assistant/ai-assistant.module';
+import { PostsModule } from './modules/posts/posts.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { AiAssistantModule } from './modules/ai-assistant/ai-assistant.module';
     AuthModule,
     DatabaseModule,
     AiAssistantModule,
+    PostsModule,
   ],
   controllers: [],
   providers: [],

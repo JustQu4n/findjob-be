@@ -1,0 +1,197 @@
+{
+  "info": {
+    "_postman_id": "posts-api-spec",
+    "name": "Posts API - Social (Posts)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Postman collection for testing posts endpoints (create, read, update, delete, like, comment, save). Use environment variables `base_url` and `token`."
+  },
+  "item": [
+    {
+      "name": "Create Post",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"content\": \"Hello from Postman - create post test\",\n  \"media_urls\": [\"https://example.com/image1.jpg\"]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/posts",
+          "host": ["{{base_url}}"],
+          "path": ["posts"]
+        }
+      }
+    },
+    {
+      "name": "Get Feed",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/posts?limit=20&offset=0",
+          "host": ["{{base_url}}"],
+          "path": ["posts"],
+          "query": [
+            { "key": "limit", "value": "20" },
+            { "key": "offset", "value": "0" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Post",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/posts/:postId",
+          "host": ["{{base_url}}"],
+          "path": ["posts", ":postId"]
+        }
+      }
+    },
+    {
+      "name": "Update Post",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"content\": \"Updated content from Postman\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/posts/:postId",
+          "host": ["{{base_url}}"],
+          "path": ["posts", ":postId"]
+        }
+      }
+    },
+    {
+      "name": "Delete Post",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/posts/:postId",
+          "host": ["{{base_url}}"],
+          "path": ["posts", ":postId"]
+        }
+      }
+    },
+    {
+      "name": "Like Post",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/posts/:postId/like",
+          "host": ["{{base_url}}"],
+          "path": ["posts", ":postId", "like"]
+        }
+      }
+    },
+    {
+      "name": "Unlike Post",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/posts/:postId/like",
+          "host": ["{{base_url}}"],
+          "path": ["posts", ":postId", "like"]
+        }
+      }
+    },
+    {
+      "name": "Create Comment",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"content\": \"Nice post!\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/posts/:postId/comment",
+          "host": ["{{base_url}}"],
+          "path": ["posts", ":postId", "comment"]
+        }
+      }
+    },
+    {
+      "name": "Get Comments",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/posts/:postId/comments?limit=50&offset=0",
+          "host": ["{{base_url}}"],
+          "path": ["posts", ":postId", "comments"],
+          "query": [
+            { "key": "limit", "value": "50" },
+            { "key": "offset", "value": "0" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Delete Comment",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/posts/:postId/comment/:commentId",
+          "host": ["{{base_url}}"],
+          "path": ["posts", ":postId", "comment", ":commentId"]
+        }
+      }
+    },
+    {
+      "name": "Save Post",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/posts/:postId/save",
+          "host": ["{{base_url}}"],
+          "path": ["posts", ":postId", "save"]
+        }
+      }
+    },
+    {
+      "name": "Unsave Post",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/posts/:postId/save",
+          "host": ["{{base_url}}"],
+          "path": ["posts", ":postId", "save"]
+        }
+      }
+    }
+  ],
+  "event": [],
+  "variable": []
+}

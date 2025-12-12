@@ -10,7 +10,7 @@ import { Repository } from 'typeorm';
 import { Application } from 'src/database/entities/application/application.entity';
 import { JobSeeker } from 'src/database/entities/job-seeker/job-seeker.entity';
 import { JobPost } from 'src/database/entities/job-post/job-post.entity';
-import { MinioService } from 'src/modules/minio/minio.service';
+import { CloudinaryService } from 'src/modules/cloudinary/cloudinary.service';
 import { NotificationsService } from 'src/modules/notifications/notifications.service';
 import { NotificationType } from '@/common/utils/enums/notification-type.enum';
 import { SubmitApplicationDto } from './dto';
@@ -24,7 +24,7 @@ export class ApplicationsService {
     private jobSeekerRepository: Repository<JobSeeker>,
     @InjectRepository(JobPost)
     private jobPostRepository: Repository<JobPost>,
-    private minioService: MinioService,
+    private cloudinaryService: CloudinaryService,
     private notificationsService: NotificationsService,
   ) {}
 
@@ -79,17 +79,15 @@ export class ApplicationsService {
       });
 
       // Validate file type
-      if (!this.minioService.validateFileType(file)) {
+      if (!this.cloudinaryService.validateFileType(file)) {
         throw new BadRequestException(
           'File không hợp lệ. Chỉ chấp nhận file PDF, DOC, DOCX',
         );
       }
 
-      console.log('File validation passed, uploading to MinIO...');
-        // Upload to MinIO (returns object key like 'resumes/...')
-        const resumeKey = await this.minioService.uploadFile(file, 'resumes');
-        // Convert to a public/presigned URL and store that in DB so frontend can access directly
-        resumeUrl = await this.minioService.getFileUrl(resumeKey);
+      console.log('File validation passed, uploading to Cloudinary...');
+        // Upload to Cloudinary (returns permanent public URL)
+        resumeUrl = await this.cloudinaryService.uploadFile(file, 'resumes');
         console.log('File uploaded successfully, stored resume URL:', resumeUrl);
     }
 
@@ -163,14 +161,15 @@ export class ApplicationsService {
       order: { applied_at: 'DESC' },
     });
 
-    // Thêm presigned URL cho resume
+    // Get applications with permanent Cloudinary URLs
     const applicationsWithUrls = await Promise.all(
       applications.map(async (app) => {
         if (app.resume_url) {
-          const presignedUrl = await this.minioService.getFileUrl(
+          // Cloudinary URLs are permanent, so just ensure they're accessible
+          const resumeUrl = await this.cloudinaryService.getFileUrl(
             app.resume_url,
           );
-          return { ...app, resume_download_url: presignedUrl };
+          return { ...app, resume_download_url: resumeUrl };
         }
         return app;
       }),

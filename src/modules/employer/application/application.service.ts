@@ -260,7 +260,7 @@ export class ApplicationService {
       if (jobSeekerUserId) {
         await this.notificationsService.sendToUser(jobSeekerUserId, {
           type: 'application_status_updated',
-          message: `Trạng thái hồ sơ của bạn đã được cập nhật: ${String(fullApp.status)}`,
+          message: `Trạng thái hồ sơ của bạn đã được cập nhật tại vị trí ${fullApp.jobPost?.title || ''}: ${String(fullApp.status)}`,
           metadata: { application_id: fullApp.application_id, status: fullApp.status },
         });
       }

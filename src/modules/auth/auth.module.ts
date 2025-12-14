@@ -7,6 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { EmailModule } from '../email/email.module';
+import { MinioModule } from '../minio/minio.module';
 
 import { User } from 'src/database/entities/user/user.entity';
 import { Role } from 'src/database/entities/role/role.entity';
@@ -28,6 +29,7 @@ import { LocalStrategy } from './strategies/local.strategy';
       signOptions: { expiresIn: '15m' },
     }),
     EmailModule,
+    MinioModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, JwtRefreshStrategy, LocalStrategy],

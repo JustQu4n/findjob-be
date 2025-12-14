@@ -7,7 +7,11 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  UseInterceptors,
+  UploadedFile,
+  Req,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthService } from './auth.service';
 import {
   RegisterDto,
@@ -32,26 +36,38 @@ export class AuthController {
   @Public()
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
-  async register(@Body() registerDto: RegisterDto) {
-    return this.authService.register(registerDto);
+  @UseInterceptors(FileInterceptor('avatar'))
+  async register(
+    @Body() registerDto: RegisterDto,
+    @UploadedFile() avatar?: Express.Multer.File,
+  ) {
+    return this.authService.register(registerDto, avatar);
   }
 
   @Public()
   @Post('register-employer')
   @HttpCode(HttpStatus.CREATED)
-  async registerEmployer(@Body() registerEmployerDto: RegisterEmployerDto) {
-    return this.authService.registerEmployer(registerEmployerDto);
+  @UseInterceptors(FileInterceptor('avatar'))
+  async registerEmployer(
+    @Body() registerEmployerDto: RegisterEmployerDto,
+    @UploadedFile() avatar?: Express.Multer.File,
+  ) {
+    return this.authService.registerEmployer(registerEmployerDto, avatar);
   }
 
   @Public()
   @Post('register-admin')
   @HttpCode(HttpStatus.CREATED)
-  async registerAdmin(@Body() registerAdminDto: RegisterAdminDto) {
-    return this.authService.registerAdmin(registerAdminDto);
+  @UseInterceptors(FileInterceptor('avatar'))
+  async registerAdmin(
+    @Body() registerAdminDto: RegisterAdminDto,
+    @UploadedFile() avatar?: Express.Multer.File,
+  ) {
+    return this.authService.registerAdmin(registerAdminDto, avatar);
   }
 
   @Public()
-  @Post('verify-email')
+  @Get('verify-email')
   @HttpCode(HttpStatus.OK)
   async verifyEmail(@Query('token') token: string) {
     return this.authService.verifyEmail(token);
@@ -71,12 +87,14 @@ export class AuthController {
     return this.authService.login(loginDto);
   }
 
-  @Public()
   @Post('refresh')
   @UseGuards(JwtRefreshAuthGuard)
   @HttpCode(HttpStatus.OK)
-  async refreshToken(@GetUser() user: User) {
-    return this.authService.refreshToken(user);
+  async refreshToken(@GetUser() payload: any, @Req() req: any) {
+    // Extract refresh token from request (strategy also extracts it and
+    // attaches to payload) — support either body or HttpOnly cookie.
+    const refreshToken = req.body?.refreshToken || req.cookies?.refreshToken || payload.refreshToken;
+    return this.authService.refreshTokens(payload.sub, refreshToken);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -103,17 +121,12 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Get('me')
   async getProfile(@GetUser() user: User) {
-    return {
-      user: {
-        user_id: user.user_id,
-        email: user.email,
-        full_name: user.full_name,
-        phone: user.phone,
-        status: user.status,
-        is_email_verified: user.is_email_verified,
-        roles: user.roles.map(role => role.role_name),
-        created_at: user.created_at,
-      },
-    };
+    return this.authService.getProfile(user);
+  }
+
+  @Public()
+  @Get('avatar/:fileName')
+  async getAvatar(@Query('fileName') fileName: string) {
+    return this.authService.getAvatarUrl(fileName);
   }
 }

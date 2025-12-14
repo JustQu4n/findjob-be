@@ -37,6 +37,18 @@ export class EmailService {
     });
   }
 
+  async sendApplicationStatusEmail(
+    to: string,
+    subject: string,
+    html: string,
+  ): Promise<void> {
+    await this.mailerService.sendMail({
+      to,
+      subject,
+      html,
+    });
+  }
+
   private getVerificationEmailTemplate(name: string, verificationUrl: string): string {
     return `
       <!DOCTYPE html>

@@ -4,10 +4,18 @@ import { AdminModule } from './modules/admin/admin.module';
 import { EmployerModule } from './modules/employer/employer.module';
 import { UsersModule } from './modules/users/users.module';
 import { DatabaseModule } from './database/database.module';
+import { AiAssistantModule } from './modules/ai-assistant/ai-assistant.module';
+import { PostsModule } from './modules/posts/posts.module';
 
 @Module({
-  imports: [AdminModule, EmployerModule, UsersModule, AuthModule, 
-    DatabaseModule
+  imports: [
+    AdminModule,
+    EmployerModule,
+    UsersModule,
+    AuthModule,
+    DatabaseModule,
+    AiAssistantModule,
+    PostsModule,
   ],
   controllers: [],
   providers: [],

@@ -27,6 +27,22 @@ export class InterviewsController {
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('employer')
+  @Get()
+  @HttpCode(HttpStatus.OK)
+  async listInterviews(@GetUser('user_id') userId: string) {
+    return this.service.listInterviews(userId);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('employer')
+  @Get(':interviewId')
+  @HttpCode(HttpStatus.OK)
+  async getInterview(@GetUser('user_id') userId: string, @Param('interviewId') interviewId: string) {
+    return this.service.getInterviewDetails(userId, interviewId);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('employer')
   @HttpPost()
   @HttpCode(HttpStatus.CREATED)
   async createInterview(@GetUser('user_id') userId: string, @Body() dto: CreateInterviewDto) {

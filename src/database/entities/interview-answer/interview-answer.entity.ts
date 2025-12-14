@@ -1,4 +1,6 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, JoinColumn, ManyToOne } from 'typeorm';
+import { InterviewQuestion } from '../interview-question/interview-question.entity';
+import { CandidateInterview } from '../candidate-interview/candidate-interview.entity';
 
 @Entity('interview_answers')
 export class InterviewAnswer {
@@ -10,6 +12,15 @@ export class InterviewAnswer {
 
   @Column({ type: 'uuid' })
   question_id: string;
+
+  
+  @ManyToOne(() => CandidateInterview)
+  @JoinColumn({ name: 'candidate_interview_id' })
+  candidateInterview: CandidateInterview;
+
+  @ManyToOne(() => InterviewQuestion)
+  @JoinColumn({ name: 'question_id' })
+  question: InterviewQuestion;
 
   @Column({ type: 'text', nullable: true })
   answer_text: string | null;

@@ -1,4 +1,6 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { User } from '../user/user.entity';
+
 
 @Entity('candidate_interviews')
 export class CandidateInterview {
@@ -13,6 +15,10 @@ export class CandidateInterview {
 
   @Column({ type: 'uuid' })
   candidate_id: string;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'candidate_id' })
+  candidate: User;
 
   @Column({ type: 'uuid' })
   assigned_by: string;

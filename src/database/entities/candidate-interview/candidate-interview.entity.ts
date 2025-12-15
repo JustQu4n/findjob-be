@@ -32,8 +32,11 @@ export class CandidateInterview {
   @Column({ type: 'timestamp', nullable: true })
   completed_at: Date | null;
 
+  @Column({ type: 'timestamp', nullable: true })
+  deadline_at: Date | null; // Hạn chót phải hoàn thành bài (assigned_at + interview.deadline)
+
   @Column({ type: 'varchar', length: 32, default: 'assigned' })
-  status: string;
+  status: string; // assigned | in_progress | submitted | timeout
 
   @Column({ type: 'numeric', nullable: true })
   total_score: number | null;

@@ -24,7 +24,13 @@ export class Interview {
   description: string | null;
 
   @Column({ type: 'varchar', length: 32, default: 'draft' })
-  status: string;
+  status: string; // draft | active | inactive
+
+  @Column({ type: 'int', nullable: true })
+  total_time_minutes: number | null; // Tổng thời gian làm bài (phút)
+
+  @Column({ type: 'timestamp', nullable: true })
+  deadline: Date | null; // Hạn chót hoàn thành sau khi assign
 
   @CreateDateColumn()
   created_at: Date;

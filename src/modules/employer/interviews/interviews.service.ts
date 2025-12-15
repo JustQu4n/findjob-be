@@ -37,6 +37,8 @@ export class InterviewsService {
       title: dto.title,
       description: dto.description || null,
       status: dto.status || 'draft',
+      total_time_minutes: dto.total_time_minutes || null,
+      deadline: dto.deadline ? new Date(dto.deadline) : null,
     } as any);
 
     return this.interviewRepo.save(iv);
@@ -198,7 +200,61 @@ export class InterviewsService {
     const emp = await this.resolveEmployerUser(userId);
     return this.interviewRepo.find({ where: { employer_id: emp.employer_id }, order: { created_at: 'DESC' as const } });
   }
+
+  async attachInterviewToJobPost(userId: string, interviewId: string, jobPostId: string) {
+    const iv = await this.findInterview(interviewId);
+    const emp = await this.resolveEmployerUser(userId);
+    if (iv.employer_id !== emp.employer_id) throw new ForbiddenException('Not allowed');
+    
+    iv.job_post_id = jobPostId;
+    await this.interviewRepo.save(iv);
+    return { message: 'Interview attached to job post successfully', interview: iv };
+  }
+
+  async detachInterviewFromJobPost(userId: string, interviewId: string) {
+    const iv = await this.findInterview(interviewId);
+    const emp = await this.resolveEmployerUser(userId);
+    if (iv.employer_id !== emp.employer_id) throw new ForbiddenException('Not allowed');
+    
+    iv.job_post_id = null;
+    await this.interviewRepo.save(iv);
+    return { message: 'Interview detached from job post successfully', interview: iv };
+  }
+  async getInterviewStatistics(userId: string, interviewId: string) {
+    const iv = await this.findInterview(interviewId);
+    const emp = await this.resolveEmployerUser(userId);
+    if (iv.employer_id !== emp.employer_id) throw new ForbiddenException('Not allowed');
+
+    const assignments = await this.candidateInterviewRepo.find({ 
+      where: { interview_id: interviewId },
+      relations: ['candidate'],
+    });
+
+    const stats = {
+      total: assignments.length,
+      assigned: assignments.filter(a => a.status === 'assigned').length,
+      in_progress: assignments.filter(a => a.status === 'in_progress').length,
+      submitted: assignments.filter(a => a.status === 'submitted').length,
+      timeout: assignments.filter(a => a.status === 'timeout').length,
+      average_score: 0,
+      candidates: assignments.map(a => ({
+        candidate_interview_id: a.candidate_interview_id,
+        candidate_name: a.candidate?.full_name || 'Unknown',
+        candidate_email: a.candidate?.email || 'Unknown',
+        candidate_avatar_url: a.candidate?.avatar_url || null,
+        status: a.status,
+        total_score: a.total_score,
+        assigned_at: a.assigned_at,
+        started_at: a.started_at,
+        completed_at: a.completed_at,
+      })),
+    };
+
+    const submittedScores = assignments.filter(a => a.status === 'submitted' && a.total_score != null).map(a => Number(a.total_score));
+    if (submittedScores.length > 0) {
+      stats.average_score = submittedScores.reduce((sum, s) => sum + s, 0) / submittedScores.length;
+    }
+
+    return stats;
+  }
 }
-
-
-

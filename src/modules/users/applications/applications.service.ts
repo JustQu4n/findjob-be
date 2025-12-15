@@ -10,6 +10,7 @@ import { Repository } from 'typeorm';
 import { Application } from 'src/database/entities/application/application.entity';
 import { JobSeeker } from 'src/database/entities/job-seeker/job-seeker.entity';
 import { JobPost } from 'src/database/entities/job-post/job-post.entity';
+import { Interview } from 'src/database/entities/interview/interview.entity';
 import { CloudinaryService } from 'src/modules/cloudinary/cloudinary.service';
 import { NotificationsService } from 'src/modules/notifications/notifications.service';
 import { NotificationType } from '@/common/utils/enums/notification-type.enum';
@@ -24,6 +25,8 @@ export class ApplicationsService {
     private jobSeekerRepository: Repository<JobSeeker>,
     @InjectRepository(JobPost)
     private jobPostRepository: Repository<JobPost>,
+    @InjectRepository(Interview)
+    private interviewRepository: Repository<Interview>,
     private cloudinaryService: CloudinaryService,
     private notificationsService: NotificationsService,
   ) {}
@@ -121,12 +124,30 @@ export class ApplicationsService {
     } catch (err) {
       console.error('Failed to send notifications for application:', err?.message || err);
     }
+
+    // Check if JobPost has an active Interview
+    let activeInterview: Interview | null = null;
+    if (jobPost.job_post_id) {
+      activeInterview = await this.interviewRepository
+        .createQueryBuilder('interview')
+        .where('interview.job_post_id = :jobPostId', { jobPostId: jobPost.job_post_id })
+        .andWhere('interview.status IN (:...statuses)', { statuses: ['active', 'open'] })
+        .getOne();
+    }
+
     return {
       message: 'Nộp đơn ứng tuyển thành công',
       data: await this.applicationRepository.findOne({
         where: { application_id: application.application_id },
         relations: ['jobPost', 'jobPost.company'],
       }),
+      interview: activeInterview ? {
+        interview_id: activeInterview.interview_id,
+        title: activeInterview.title,
+        description: activeInterview.description,
+        total_time_minutes: activeInterview.total_time_minutes,
+        has_interview: true,
+      } : null,
     };
   }
 

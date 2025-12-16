@@ -1,5 +1,7 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { User } from '../user/user.entity';
+import { Interview } from '../interview/interview.entity';
+import { Application } from '../application/application.entity';
 
 
 @Entity('candidate_interviews')
@@ -52,4 +54,13 @@ export class CandidateInterview {
 
   @UpdateDateColumn()
   updated_at: Date;
+
+  // Relations
+  @ManyToOne(() => Interview, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'interview_id' })
+  interview: Interview;
+
+  @ManyToOne(() => Application, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'application_id' })
+  application: Application;
 }

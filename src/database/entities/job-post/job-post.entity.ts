@@ -14,6 +14,7 @@ import { Company } from '../company/company.entity';
 import { Category } from '../category/category.entity';
 import { Application } from '../application/application.entity';
 import { JobPostSkill } from '../job-post-skill/job-post-skill.entity';
+import { Interview } from '../interview/interview.entity';
 import { JobType, JobLevel, Gender, JobStatus } from 'src/common/utils/enums';
 
 
@@ -126,4 +127,7 @@ export class JobPost {
 
   @OneToMany(() => JobPostSkill, (jobPostSkill) => jobPostSkill.jobPost)
   jobPostSkills: JobPostSkill[];
+
+  @OneToMany(() => Interview, (interview) => interview.jobPost)
+  interviews: Interview[];
 }

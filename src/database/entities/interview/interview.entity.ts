@@ -4,7 +4,10 @@ import {
   PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+import { JobPost } from '../job-post/job-post.entity';
 
 @Entity('interviews')
 export class Interview {
@@ -37,4 +40,11 @@ export class Interview {
 
   @UpdateDateColumn()
   updated_at: Date;
+
+  // Relations
+  @ManyToOne(() => JobPost, (jobPost) => jobPost.interviews, {
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'job_post_id' })
+  jobPost: JobPost;
 }

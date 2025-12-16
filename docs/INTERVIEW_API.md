@@ -230,7 +230,49 @@ Response: Updated InterviewAnswer
 
 ## 🟢 JOBSEEKER ENDPOINTS
 
-### 1. Apply Job (Kiểm tra Interview)
+### 1. Lấy danh sách Applications có Interview (Cho trang "Applications with Interviews")
+```http
+GET /jobseeker/applications/with-interviews
+Authorization: Bearer {token}
+Role: jobseeker
+
+Response: Application[]
+[
+  {
+    "application_id": "uuid",
+    "job_post_id": "uuid",
+    "status": "pending",
+    "applied_at": "...",
+    "jobPost": {
+      "job_post_id": "uuid",
+      "title": "Backend Developer",
+      "company": {...}
+    },
+    "interview": {
+      "interview_id": "uuid",
+      "title": "Backend Interview",
+      "description": "...",
+      "total_time_minutes": 30,
+      "deadline": "2025-12-31T23:59:59Z",
+      "status": "active"
+    },
+    "candidateInterview": {
+      "candidate_interview_id": "uuid",
+      "status": "assigned",
+      "assigned_at": "...",
+      "deadline_at": "...",
+      "started_at": null,
+      "completed_at": null
+    } | null
+  }
+]
+```
+**Nghiệp vụ**: 
+- Hiển thị tất cả applications có interview
+- Nếu `candidateInterview` null → chưa accept, hiện nút "Bắt đầu ngay"
+- Nếu có `candidateInterview` → đã accept, hiện trạng thái và deadline
+
+### 2. Apply Job (Kiểm tra Interview)
 ```http
 POST /jobseeker/applications
 Authorization: Bearer {token}
@@ -258,7 +300,7 @@ Response:
 ```
 **Nghiệp vụ**: Nếu `interview` không null → Frontend hiển thị popup mời làm bài
 
-### 2. Xem thông tin Interview (Preview - trước khi accept)
+### 3. Xem thông tin Interview (Preview - trước khi accept)
 ```http
 GET /jobseeker/interviews/preview/:interviewId
 Authorization: Bearer {token}
@@ -276,7 +318,7 @@ Response:
 }
 ```
 
-### 3. Accept Interview (Self-Assign)
+### 4. Accept Interview (Self-Assign)
 ```http
 POST /jobseeker/interviews/:interviewId/accept
 Authorization: Bearer {token}
@@ -299,7 +341,7 @@ Response: CandidateInterview
 }
 ```
 
-### 4. Lấy danh sách Interview của mình
+### 5. Lấy danh sách Interview của mình
 ```http
 GET /jobseeker/interviews
 Authorization: Bearer {token}
@@ -308,7 +350,55 @@ Role: jobseeker
 Response: CandidateInterview[]
 ```
 
-### 5. Xem chi tiết bài Interview được gán
+### 6. Lấy lịch sử Interview đã làm (với điểm và feedback)
+```http
+GET /jobseeker/interviews/history
+Authorization: Bearer {token}
+Role: jobseeker
+
+Response:
+[
+  {
+    "candidate_interview_id": "uuid",
+    "interview": {
+      "interview_id": "uuid",
+      "title": "Backend Interview",
+      "description": "..."
+    },
+    "jobPost": {
+      "job_post_id": "uuid",
+      "title": "Backend Developer",
+      "company": {...}
+    },
+    "status": "submitted",
+    "assigned_at": "...",
+    "started_at": "...",
+    "completed_at": "...",
+    "deadline_at": "...",
+    "total_score": 85,
+    "max_score": 100,
+    "percentage": "85.00",
+    "result": "pass",
+    "answers": [
+      {
+        "question_id": "uuid",
+        "question_text": "Mô tả kiến trúc microservices",
+        "answer_text": "Microservices là...",
+        "score": 8.5,
+        "max_score": 10,
+        "feedback": "Câu trả lời tốt, chi tiết",
+        "graded_at": "...",
+        "elapsed_seconds": 120
+      },
+      ...
+    ]
+  },
+  ...
+]
+```
+**Nghiệp vụ**: Hiển thị lịch sử các bài interview đã làm, bao gồm điểm số, feedback từ employer
+
+### 7. Xem chi tiết bài Interview được gán
 ```http
 GET /jobseeker/interviews/:candidateInterviewId
 Authorization: Bearer {token}
@@ -337,7 +427,7 @@ Response:
 ```
 **Nghiệp vụ**: Frontend hiển thị từng câu 1, có countdown per question
 
-### 6. Bắt đầu làm bài
+### 8. Bắt đầu làm bài
 ```http
 POST /jobseeker/interviews/:candidateInterviewId/start
 Authorization: Bearer {token}
@@ -346,7 +436,7 @@ Role: jobseeker
 Response: CandidateInterview (status = in_progress, started_at = now)
 ```
 
-### 7. Submit câu trả lời
+### 9. Submit câu trả lời
 ```http
 POST /jobseeker/interviews/:candidateInterviewId/submit
 Authorization: Bearer {token}
@@ -368,7 +458,7 @@ Response: { "ok": true }
 ```
 **Nghiệp vụ**: Status đổi thành `submitted`, completed_at = now
 
-### 8. Xem câu trả lời của mình
+### 10. Xem câu trả lời của mình
 ```http
 GET /jobseeker/interviews/:candidateInterviewId/answers
 Authorization: Bearer {token}
@@ -376,6 +466,20 @@ Role: jobseeker
 
 Response: InterviewAnswer[]
 ```
+
+### 11. Gửi Reminder về Deadline (System/Cron endpoint)
+```http
+POST /jobseeker/interviews/send-reminders
+
+Response:
+{
+  "sent": 5
+}
+```
+**Nghiệp vụ**: 
+- Endpoint này có thể được gọi bởi cron job hoặc scheduler
+- Tự động tìm các interview có deadline trong vòng 24 giờ
+- Gửi notification và email nhắc nhở user hoàn thành bài interview
 
 ---
 
@@ -454,8 +558,10 @@ Response: InterviewAnswer[]
 ### Flow 2: JobSeeker Apply & Accept Interview
 1. JobSeeker apply job → API trả về `interview` object (nếu có)
 2. Frontend hiển thị popup: "Bạn có muốn làm bài Interview?"
-3. Click "Bắt đầu ngay" → `POST /jobseeker/interviews/:id/accept`
+3a. Click "Bắt đầu ngay" → `POST /jobseeker/interviews/:id/accept`
+3b. Click "Làm sau" → User có thể vào trang Applications để xem lại
 4. Tạo `CandidateInterview` (status = assigned, deadline_at = calculated)
+5. Gửi notification và email xác nhận
 
 ### Flow 3: JobSeeker làm bài
 1. Vào danh sách interview: `GET /jobseeker/interviews`
@@ -471,6 +577,30 @@ Response: InterviewAnswer[]
 2. Xem danh sách ứng viên: `GET /employer/interviews/:id/candidates`
 3. Xem câu trả lời: `GET /employer/interviews/:id/candidates/:ciId/answers`
 4. Chấm điểm: `PATCH /employer/interviews/:id/candidates/:ciId/answers/:answerId/grade`
+
+### Flow 5: "Làm sau" - Xem lại Interview từ trang Applications
+1. User click "Làm sau" sau khi apply
+2. User vào trang Applications: `GET /jobseeker/applications/with-interviews`
+3. Hiển thị danh sách applications có interview
+4. Nếu chưa accept (candidateInterview = null) → hiện nút "Bắt đầu ngay"
+5. Nếu đã accept → hiện trạng thái (assigned/in_progress) và deadline
+6. Click "Bắt đầu" → Accept interview như bình thường
+
+### Flow 6: Xem lịch sử Interview đã làm
+1. User vào trang "Lịch sử Interview": `GET /jobseeker/interviews/history`
+2. Hiển thị danh sách các bài đã làm (status = submitted/timeout)
+3. Mỗi bài hiển thị:
+   - Tên interview và công ty
+   - Điểm tổng và phần trăm
+   - Kết quả (pass/fail)
+   - Chi tiết từng câu hỏi với điểm và feedback từ employer
+   - Thời gian làm bài
+
+### Flow 7: Nhắc nhở Deadline
+1. Hệ thống chạy cron job (mỗi 6 giờ): `POST /jobseeker/interviews/send-reminders`
+2. Tìm các interview có deadline trong vòng 24 giờ
+3. Gửi notification in-app và email cho từng user
+4. Email chứa thông tin: tên bài, deadline, thời gian còn lại
 
 ---
 
@@ -488,6 +618,11 @@ Response: InterviewAnswer[]
 - [x] Employer statistics dashboard
 - [x] Employer grade answers
 - [x] Timeout detection (getAssignment kiểm tra deadline_at)
+- [x] "Làm sau" feature: GET /jobseeker/applications/with-interviews
+- [x] Lịch sử interview: GET /jobseeker/interviews/history (với điểm và feedback)
+- [x] Gửi notification và email khi accept interview
+- [x] Nhắc nhở deadline: POST /jobseeker/interviews/send-reminders
+- [x] Notification types: INTERVIEW_ASSIGNED, INTERVIEW_REMINDER
 
 ---
 
@@ -512,8 +647,98 @@ Response: InterviewAnswer[]
   📄 Số câu hỏi: {call preview API}
   
   <Button onClick={acceptInterview}>Bắt đầu ngay</Button>
-  <Button>Làm sau</Button>
+  <Button onClick={handleDoLater}>Làm sau</Button>
 </Modal>
+
+// Nếu click "Làm sau":
+function handleDoLater() {
+  closeModal();
+  // User có thể vào trang Applications để xem lại
+  navigate('/applications');
+}
+```
+
+### Trang Applications với Interview
+```javascript
+// GET /jobseeker/applications/with-interviews
+const applicationsWithInterviews = [
+  {
+    application_id: "...",
+    jobPost: { title: "Backend Developer", company: {...} },
+    interview: { interview_id: "...", title: "Backend Interview", deadline: "..." },
+    candidateInterview: null // chưa accept
+  },
+  {
+    application_id: "...",
+    jobPost: { title: "Frontend Developer", company: {...} },
+    interview: { interview_id: "...", title: "Frontend Interview", deadline: "..." },
+    candidateInterview: { status: "assigned", deadline_at: "..." } // đã accept
+  }
+];
+
+// UI:
+<ApplicationList>
+  {applicationsWithInterviews.map(app => (
+    <ApplicationCard>
+      <JobTitle>{app.jobPost.title}</JobTitle>
+      <InterviewBadge>{app.interview.title}</InterviewBadge>
+      
+      {!app.candidateInterview ? (
+        <Button onClick={() => acceptInterview(app.interview.interview_id, app.application_id)}>
+          Bắt đầu ngay
+        </Button>
+      ) : (
+        <div>
+          <StatusBadge status={app.candidateInterview.status} />
+          <Deadline>Hạn: {app.candidateInterview.deadline_at}</Deadline>
+          {app.candidateInterview.status === 'assigned' && (
+            <Button onClick={() => startInterview(app.candidateInterview.candidate_interview_id)}>
+              Bắt đầu làm bài
+            </Button>
+          )}
+        </div>
+      )}
+    </ApplicationCard>
+  ))}
+</ApplicationList>
+```
+
+### Trang Lịch sử Interview
+```javascript
+// GET /jobseeker/interviews/history
+const history = await fetch('/jobseeker/interviews/history');
+
+<InterviewHistory>
+  {history.map(item => (
+    <InterviewCard>
+      <InterviewTitle>{item.interview.title}</InterviewTitle>
+      <JobInfo>{item.jobPost.title} - {item.jobPost.company.name}</JobInfo>
+      
+      <ScoreDisplay>
+        <Score>{item.total_score} / {item.max_score}</Score>
+        <Percentage>{item.percentage}%</Percentage>
+        <Result status={item.result}>{item.result}</Result>
+      </ScoreDisplay>
+      
+      <Dates>
+        <div>Bắt đầu: {item.started_at}</div>
+        <div>Hoàn thành: {item.completed_at}</div>
+      </Dates>
+      
+      <AnswersList>
+        {item.answers.map(ans => (
+          <AnswerItem>
+            <Question>{ans.question_text}</Question>
+            <YourAnswer>{ans.answer_text}</YourAnswer>
+            <Score>{ans.score} / {ans.max_score}</Score>
+            {ans.feedback && <Feedback>{ans.feedback}</Feedback>}
+            <Time>{ans.elapsed_seconds}s</Time>
+          </AnswerItem>
+        ))}
+      </AnswersList>
+    </InterviewCard>
+  ))}
+</InterviewHistory>
 ```
 
 ### Làm bài Interview

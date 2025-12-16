@@ -30,6 +30,14 @@ export class UsersInterviewController {
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('jobseeker')
+  @Get('history')
+  @HttpCode(HttpStatus.OK)
+  async getHistory(@GetUser('user_id') userId: string) {
+    return this.service.getInterviewHistory(userId);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('jobseeker')
   @Get('preview/:interviewId')
   @HttpCode(HttpStatus.OK)
   async previewInterview(@Param('interviewId') interviewId: string) {
@@ -74,5 +82,12 @@ export class UsersInterviewController {
   @HttpCode(HttpStatus.OK)
   async listAnswers(@Param('id') id: string, @GetUser('user_id') userId: string) {
     return this.service.listAnswers(id, userId);
+  }
+
+  // Admin/System endpoint to send deadline reminders (can be called by cron job)
+  @HttpPost('send-reminders')
+  @HttpCode(HttpStatus.OK)
+  async sendReminders() {
+    return this.service.sendDeadlineReminders();
   }
 }

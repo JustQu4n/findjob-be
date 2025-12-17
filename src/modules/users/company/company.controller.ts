@@ -79,4 +79,35 @@ export class CompanyController {
       companyId,
     );
   }
+
+  @Public()
+  @Get('search')
+  @HttpCode(HttpStatus.OK)
+  async searchCompanies(
+    @Query('keyword') keyword: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const paginationDto: PaginationDto = {
+      page: page ? Number(page) : undefined,
+      limit: limit ? Number(limit) : undefined,
+    };
+
+    return this.companyService.searchCompanies(keyword, paginationDto);
+  }
+
+  @Public()
+  @Get('list')
+  @HttpCode(HttpStatus.OK)
+  async listCompanies(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const paginationDto: PaginationDto = {
+      page: page ? Number(page) : undefined,
+      limit: limit ? Number(limit) : undefined,
+    };
+
+    return this.companyService.getAllCompanies(paginationDto);
+  }
 }

@@ -165,4 +165,53 @@ export class CompanyService {
       followedAt: followedCompany?.followed_at || null,
     };
   }
+
+  async getAllCompanies(paginationDto: PaginationDto) {
+    const { page = 1, limit = 10 } = paginationDto;
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await this.companyRepository.findAndCount({
+      order: { created_at: 'DESC' },
+      skip,
+      take: limit,
+    });
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async searchCompanies(keyword: string, paginationDto: PaginationDto) {
+    const { page = 1, limit = 10 } = paginationDto;
+    const skip = (page - 1) * limit;
+
+    const qb = this.companyRepository.createQueryBuilder('company');
+    if (keyword) {
+      const kw = `%${keyword}%`;
+      qb.where(
+        'company.name ILIKE :kw OR company.industry ILIKE :kw OR company.location ILIKE :kw',
+        { kw },
+      );
+    }
+
+    qb.orderBy('company.created_at', 'DESC').skip(skip).take(limit);
+
+    const [data, total] = await qb.getManyAndCount();
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
 }

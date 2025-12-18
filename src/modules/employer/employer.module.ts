@@ -6,6 +6,7 @@ import { CompanyModule } from './company/company.module';
 import { ApplicationModule } from './application/application.module';
 import { JobSeekerModule } from './job-seeker/job-seeker.module';
 import { InterviewsModule } from './interviews/interviews.module';
+import { StatsModule } from './stats/stats.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { InterviewsModule } from './interviews/interviews.module';
     ApplicationModule,
     JobSeekerModule,
     InterviewsModule,
+    StatsModule,
   ],
   controllers: [],
   providers: [],

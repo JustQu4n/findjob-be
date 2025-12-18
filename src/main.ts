@@ -1,4 +1,6 @@
 import { NestFactory } from '@nestjs/core';
+// Patch TypeORM Repository to auto-fill uuid primary keys before save
+import './database/patch-repository-uuid';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';

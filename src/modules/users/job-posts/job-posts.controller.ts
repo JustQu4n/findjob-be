@@ -26,8 +26,29 @@ export class JobPostsController {
   @Public()
   @Get('job-posts')
   @HttpCode(HttpStatus.OK)
-  async findAll(@Query() paginationDto: PaginationDto) {
-    return this.jobPostsService.findAll(paginationDto);
+  async findAll(@Query() searchDto: SearchJobPostDto) {
+    return this.jobPostsService.findAll(searchDto);
+  }
+
+  @Public()
+  @Get('job-posts/featured')
+  @HttpCode(HttpStatus.OK)
+  async getFeatured(@Query() paginationDto: PaginationDto) {
+    return this.jobPostsService.getFeatured(paginationDto);
+  }
+
+  @Public()
+  @Get('job-posts/most-viewed')
+  @HttpCode(HttpStatus.OK)
+  async getMostViewed(@Query() paginationDto: PaginationDto) {
+    return this.jobPostsService.getMostViewed(paginationDto);
+  }
+
+  @Public()
+  @Get('job-posts/most-saved')
+  @HttpCode(HttpStatus.OK)
+  async getMostSaved(@Query() paginationDto: PaginationDto) {
+    return this.jobPostsService.getMostSaved(paginationDto);
   }
 
   @Public()
@@ -42,6 +63,17 @@ export class JobPostsController {
   @HttpCode(HttpStatus.OK)
   async findOne(@Param('id') id: string) {
     return this.jobPostsService.findOne(id);
+  }
+
+  @Public()
+  @Get('job-posts/:id/related')
+  @HttpCode(HttpStatus.OK)
+  async getRelated(
+    @Param('id') id: string,
+    @Query('limit') limit?: number,
+  ) {
+    const l = limit ? Number(limit) : 5;
+    return this.jobPostsService.getRelated(id, l);
   }
 
   // Saved Jobs endpoints

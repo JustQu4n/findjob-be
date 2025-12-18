@@ -9,7 +9,7 @@ import { Education } from 'src/database/entities/education/education.entity';
 import { Project } from 'src/database/entities/project/project.entity';
 import { UserSkill } from 'src/database/entities/user-skill/user-skill.entity';
 import { Skill } from 'src/database/entities/skill/skill.entity';
-import { MinioModule } from 'src/modules/minio/minio.module';
+import { CloudinaryModule } from 'src/modules/cloudinary/cloudinary.module';
 
 import { ProfileService } from './profile.service';
 import { ProfileController } from './profile.controller';
@@ -17,7 +17,7 @@ import { ProfileController } from './profile.controller';
 @Module({
   imports: [
     TypeOrmModule.forFeature([JobSeeker, Application, User, Experience, Education, Project, UserSkill, Skill]),
-    MinioModule,
+    CloudinaryModule,
   ],
   controllers: [ProfileController],
   providers: [ProfileService],

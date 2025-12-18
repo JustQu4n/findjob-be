@@ -15,7 +15,7 @@ import { Education } from 'src/database/entities/education/education.entity';
 import { Project } from 'src/database/entities/project/project.entity';
 import { UserSkill } from 'src/database/entities/user-skill/user-skill.entity';
 import { Skill } from 'src/database/entities/skill/skill.entity';
-import { MinioService } from 'src/modules/minio/minio.service';
+import { CloudinaryService } from 'src/modules/cloudinary/cloudinary.service';
 import { UpdateJobSeekerDto, CreateExperienceDto, UpdateExperienceDto, CreateEducationDto, UpdateEducationDto, CreateProjectDto, UpdateProjectDto, AddSkillDto, UpdateSkillDto } from './dto';
 
 @Injectable()
@@ -37,7 +37,7 @@ export class ProfileService {
     private userSkillRepository: Repository<UserSkill>,
     @InjectRepository(Skill)
     private skillRepository: Repository<Skill>,
-    private minioService: MinioService,
+    private cloudinaryService: CloudinaryService,
   ) {}
 
   async findOneById(userId: string) {
@@ -57,10 +57,10 @@ export class ProfileService {
       throw new NotFoundException('Không tìm thấy hồ sơ người tìm việc');
     }
 
-    // Get presigned URL for avatar if exists
+    // Get avatar URL if exists (Cloudinary URLs are permanent)
     let avatar_url: string | null = null;
     if (jobSeeker.avatar_url) {
-      avatar_url = await this.minioService.getFileUrl(jobSeeker.avatar_url);
+      avatar_url = await this.cloudinaryService.getFileUrl(jobSeeker.avatar_url);
     }
 
     // Format experiences
@@ -202,21 +202,18 @@ export class ProfileService {
     // Delete old avatar if exists
     if (jobSeeker.avatar_url) {
       try {
-        await this.minioService.deleteFile(jobSeeker.avatar_url);
+        await this.cloudinaryService.deleteFile(jobSeeker.avatar_url);
       } catch (error) {
         console.log('Failed to delete old avatar:', error.message);
       }
     }
 
-    // Upload new avatar (returns object key like 'avatars/....')
-    const avatarKey = await this.minioService.uploadFile(avatar, 'avatars');
+    // Upload new avatar to Cloudinary (returns permanent public URL)
+    const avatarUrl = await this.cloudinaryService.uploadFile(avatar, 'avatars');
 
-    // Get a public/presigned URL for frontend and store that URL in DB
-    const publicUrl = await this.minioService.getFileUrl(avatarKey);
-
-    // Update both jobSeeker and user with the public URL so frontend can use it directly
-    jobSeeker.avatar_url = publicUrl;
-    jobSeeker.user.avatar_url = publicUrl;
+    // Cloudinary URLs are permanent, so we can store them directly in DB
+    jobSeeker.avatar_url = avatarUrl;
+    jobSeeker.user.avatar_url = avatarUrl;
 
     await this.jobSeekerRepository.save(jobSeeker);
     await this.userRepository.save(jobSeeker.user);
@@ -224,8 +221,8 @@ export class ProfileService {
     return {
       message: 'Cập nhật avatar thành công',
       data: {
-        avatar_url: publicUrl,
-        avatar_download_url: publicUrl,
+        avatar_url: avatarUrl,
+        avatar_download_url: avatarUrl,
       },
     };
   }

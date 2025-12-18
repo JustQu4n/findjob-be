@@ -22,6 +22,11 @@ import { GetUser } from 'src/common/decorators/get-user.decorator';
 export class ApplicationsController {
   constructor(private readonly applicationsService: ApplicationsService) {}
 
+  @Get('with-interviews')
+  getApplicationsWithInterviews(@GetUser('user_id') userId: string) {
+    return this.applicationsService.getApplicationsWithInterviews(userId);
+  }
+
   @Post('submit')
   @UseInterceptors(FileInterceptor('resume'))
   submitApplication(

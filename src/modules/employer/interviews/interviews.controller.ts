@@ -27,6 +27,30 @@ export class InterviewsController {
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('employer')
+  @Get()
+  @HttpCode(HttpStatus.OK)
+  async listInterviews(@GetUser('user_id') userId: string) {
+    return this.service.listInterviews(userId);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('employer')
+  @Get(':interviewId')
+  @HttpCode(HttpStatus.OK)
+  async getInterview(@GetUser('user_id') userId: string, @Param('interviewId') interviewId: string) {
+    return this.service.getInterviewDetails(userId, interviewId);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('employer')
+  @Get(':interviewId/statistics')
+  @HttpCode(HttpStatus.OK)
+  async getStatistics(@GetUser('user_id') userId: string, @Param('interviewId') interviewId: string) {
+    return this.service.getInterviewStatistics(userId, interviewId);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('employer')
   @HttpPost()
   @HttpCode(HttpStatus.CREATED)
   async createInterview(@GetUser('user_id') userId: string, @Body() dto: CreateInterviewDto) {
@@ -47,6 +71,22 @@ export class InterviewsController {
   @HttpCode(HttpStatus.OK)
   async deleteInterview(@GetUser('user_id') userId: string, @Param('interviewId') interviewId: string) {
     return this.service.deleteInterview(userId, interviewId);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('employer')
+  @HttpPost(':interviewId/attach-jobpost')
+  @HttpCode(HttpStatus.OK)
+  async attachJobPost(@GetUser('user_id') userId: string, @Param('interviewId') interviewId: string, @Body() body: { job_post_id: string }) {
+    return this.service.attachInterviewToJobPost(userId, interviewId, body.job_post_id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('employer')
+  @HttpPost(':interviewId/detach-jobpost')
+  @HttpCode(HttpStatus.OK)
+  async detachJobPost(@GetUser('user_id') userId: string, @Param('interviewId') interviewId: string) {
+    return this.service.detachInterviewFromJobPost(userId, interviewId);
   }
 
   // Questions CRUD

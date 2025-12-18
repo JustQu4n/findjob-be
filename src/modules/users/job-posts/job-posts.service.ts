@@ -19,14 +19,187 @@ export class JobPostsService {
     private jobSeekerRepository: Repository<JobSeeker>,
   ) {}
 
-  async findAll(paginationDto: PaginationDto) {
+  async findAll(searchDto: SearchJobPostDto) {
+    const { 
+      keyword, 
+      location, 
+      job_type,
+      category_id,
+      level,
+      experience,
+      salary_range,
+      company_id,
+      skills,
+      sort_by = 'created_at',
+      sort_order = 'DESC',
+      page = 1, 
+      limit = 10 
+    } = searchDto;
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.jobPostRepository
+      .createQueryBuilder('job_post')
+      .leftJoinAndSelect('job_post.company', 'company')
+      .leftJoinAndSelect('job_post.category', 'category')
+      .leftJoinAndSelect('job_post.employer', 'employer')
+      .leftJoinAndSelect('job_post.jobPostSkills', 'jobPostSkills')
+      .leftJoinAndSelect('jobPostSkills.skill', 'skill')
+      .where('job_post.status = :status', { status: JobStatus.ACTIVE });
+
+    // Search by keyword in title, description, or company name
+    if (keyword && keyword.trim()) {
+      queryBuilder.andWhere(
+        '(LOWER(job_post.title) LIKE LOWER(:keyword) OR LOWER(job_post.description) LIKE LOWER(:keyword) OR LOWER(job_post.requirements) LIKE LOWER(:keyword) OR LOWER(company.name) LIKE LOWER(:keyword))',
+        { keyword: `%${keyword}%` },
+      );
+    }
+
+    // Filter by location
+    if (location && location.trim()) {
+      queryBuilder.andWhere('LOWER(job_post.location) LIKE LOWER(:location)', {
+        location: `%${location}%`,
+      });
+    }
+
+    // Filter by job type
+    if (job_type) {
+      queryBuilder.andWhere('job_post.job_type = :job_type', { job_type });
+    }
+
+    // Filter by category
+    if (category_id) {
+      queryBuilder.andWhere('job_post.category_id = :category_id', { category_id });
+    }
+
+    // Filter by level
+    if (level) {
+      queryBuilder.andWhere('job_post.level = :level', { level });
+    }
+
+    // Filter by experience
+    if (experience) {
+      queryBuilder.andWhere('LOWER(job_post.experience) LIKE LOWER(:experience)', {
+        experience: `%${experience}%`,
+      });
+    }
+
+    // Filter by salary range
+    if (salary_range) {
+      queryBuilder.andWhere('LOWER(job_post.salary_range) LIKE LOWER(:salary_range)', {
+        salary_range: `%${salary_range}%`,
+      });
+    }
+
+    // Filter by company
+    if (company_id) {
+      queryBuilder.andWhere('job_post.company_id = :company_id', { company_id });
+    }
+
+    // Filter by skills
+    if (skills && skills.length > 0) {
+      queryBuilder.andWhere('skill.name IN (:...skills)', { skills });
+    }
+
+    // Sorting
+    const validSortColumns = {
+      'created_at': 'job_post.created_at',
+      'views_count': 'job_post.views_count',
+      'saves_count': 'job_post.saves_count',
+      'title': 'job_post.title',
+      'salary_range': 'job_post.salary_range',
+    };
+
+    const sortColumn = validSortColumns[sort_by] || 'job_post.created_at';
+    queryBuilder.orderBy(sortColumn, sort_order);
+
+    // Add secondary sort by created_at if primary sort is not created_at
+    if (sort_by !== 'created_at') {
+      queryBuilder.addOrderBy('job_post.created_at', 'DESC');
+    }
+
+    const [data, total] = await queryBuilder
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        hasNextPage: page < Math.ceil(total / limit),
+        hasPreviousPage: page > 1,
+      },
+    };
+  }
+
+  async getFeatured(paginationDto: PaginationDto) {
+    const { page = 1, limit = 10 } = paginationDto;
+    const skip = (page - 1) * limit;
+
+    // Featured posts: high views + saves, recent posts prioritized
+    const [data, total] = await this.jobPostRepository.findAndCount({
+      where: { status: JobStatus.ACTIVE },
+      relations: ['company', 'category', 'employer'],
+      order: { 
+        views_count: 'DESC',
+        saves_count: 'DESC',
+        created_at: 'DESC' 
+      },
+      skip,
+      take: limit,
+    });
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async getMostViewed(paginationDto: PaginationDto) {
     const { page = 1, limit = 10 } = paginationDto;
     const skip = (page - 1) * limit;
 
     const [data, total] = await this.jobPostRepository.findAndCount({
       where: { status: JobStatus.ACTIVE },
       relations: ['company', 'category', 'employer'],
-      order: { created_at: 'DESC' },
+      order: { 
+        views_count: 'DESC',
+        created_at: 'DESC' 
+      },
+      skip,
+      take: limit,
+    });
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async getMostSaved(paginationDto: PaginationDto) {
+    const { page = 1, limit = 10 } = paginationDto;
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await this.jobPostRepository.findAndCount({
+      where: { status: JobStatus.ACTIVE },
+      relations: ['company', 'category', 'employer'],
+      order: { 
+        saves_count: 'DESC',
+        created_at: 'DESC' 
+      },
       skip,
       take: limit,
     });
@@ -43,7 +216,21 @@ export class JobPostsService {
   }
 
   async search(searchDto: SearchJobPostDto) {
-    const { keyword, location, page = 1, limit = 10 } = searchDto;
+    const { 
+      keyword, 
+      location, 
+      job_type,
+      category_id,
+      level,
+      experience,
+      salary_range,
+      company_id,
+      skills,
+      sort_by = 'created_at',
+      sort_order = 'DESC',
+      page = 1, 
+      limit = 10 
+    } = searchDto;
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.jobPostRepository
@@ -51,25 +238,82 @@ export class JobPostsService {
       .leftJoinAndSelect('job_post.company', 'company')
       .leftJoinAndSelect('job_post.category', 'category')
       .leftJoinAndSelect('job_post.employer', 'employer')
+      .leftJoinAndSelect('job_post.jobPostSkills', 'jobPostSkills')
+      .leftJoinAndSelect('jobPostSkills.skill', 'skill')
       .where('job_post.status = :status', { status: JobStatus.ACTIVE });
 
-    // Search by keyword in title or description
+    // Search by keyword in title, description, or company name
     if (keyword && keyword.trim()) {
       queryBuilder.andWhere(
-        '(LOWER(job_post.title) LIKE LOWER(:keyword) OR LOWER(job_post.description) LIKE LOWER(:keyword) OR LOWER(job_post.requirements) LIKE LOWER(:keyword))',
+        '(LOWER(job_post.title) LIKE LOWER(:keyword) OR LOWER(job_post.description) LIKE LOWER(:keyword) OR LOWER(job_post.requirements) LIKE LOWER(:keyword) OR LOWER(company.name) LIKE LOWER(:keyword))',
         { keyword: `%${keyword}%` },
       );
     }
 
-    // Search by location
+    // Filter by location
     if (location && location.trim()) {
       queryBuilder.andWhere('LOWER(job_post.location) LIKE LOWER(:location)', {
         location: `%${location}%`,
       });
     }
 
+    // Filter by job type
+    if (job_type) {
+      queryBuilder.andWhere('job_post.job_type = :job_type', { job_type });
+    }
+
+    // Filter by category
+    if (category_id) {
+      queryBuilder.andWhere('job_post.category_id = :category_id', { category_id });
+    }
+
+    // Filter by level
+    if (level) {
+      queryBuilder.andWhere('job_post.level = :level', { level });
+    }
+
+    // Filter by experience
+    if (experience) {
+      queryBuilder.andWhere('LOWER(job_post.experience) LIKE LOWER(:experience)', {
+        experience: `%${experience}%`,
+      });
+    }
+
+    // Filter by salary range
+    if (salary_range) {
+      queryBuilder.andWhere('LOWER(job_post.salary_range) LIKE LOWER(:salary_range)', {
+        salary_range: `%${salary_range}%`,
+      });
+    }
+
+    // Filter by company
+    if (company_id) {
+      queryBuilder.andWhere('job_post.company_id = :company_id', { company_id });
+    }
+
+    // Filter by skills
+    if (skills && skills.length > 0) {
+      queryBuilder.andWhere('skill.name IN (:...skills)', { skills });
+    }
+
+    // Sorting
+    const validSortColumns = {
+      'created_at': 'job_post.created_at',
+      'views_count': 'job_post.views_count',
+      'saves_count': 'job_post.saves_count',
+      'title': 'job_post.title',
+      'salary_range': 'job_post.salary_range',
+    };
+
+    const sortColumn = validSortColumns[sort_by] || 'job_post.created_at';
+    queryBuilder.orderBy(sortColumn, sort_order);
+
+    // Add secondary sort by created_at if primary sort is not created_at
+    if (sort_by !== 'created_at') {
+      queryBuilder.addOrderBy('job_post.created_at', 'DESC');
+    }
+
     const [data, total] = await queryBuilder
-      .orderBy('job_post.created_at', 'DESC')
       .skip(skip)
       .take(limit)
       .getManyAndCount();
@@ -81,8 +325,19 @@ export class JobPostsService {
         page,
         limit,
         totalPages: Math.ceil(total / limit),
-        keyword,
-        location,
+        filters: {
+          keyword,
+          location,
+          job_type,
+          category_id,
+          level,
+          experience,
+          salary_range,
+          company_id,
+          skills,
+          sort_by,
+          sort_order,
+        },
       },
     };
   }

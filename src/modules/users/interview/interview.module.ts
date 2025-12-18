@@ -5,9 +5,17 @@ import { UsersInterviewService } from './interview.service';
 import { CandidateInterview } from 'src/database/entities/candidate-interview/candidate-interview.entity';
 import { InterviewQuestion } from 'src/database/entities/interview-question/interview-question.entity';
 import { InterviewAnswer } from 'src/database/entities/interview-answer/interview-answer.entity';
+import { Application } from 'src/database/entities/application/application.entity';
+import { Interview } from 'src/database/entities/interview/interview.entity';
+import { NotificationsModule } from 'src/modules/notifications/notifications.module';
+import { EmailModule } from 'src/modules/email/email.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([CandidateInterview, InterviewQuestion, InterviewAnswer])],
+  imports: [
+    TypeOrmModule.forFeature([CandidateInterview, InterviewQuestion, InterviewAnswer, Application, Interview]),
+    NotificationsModule,
+    EmailModule,
+  ],
   controllers: [UsersInterviewController],
   providers: [UsersInterviewService],
   exports: [UsersInterviewService],

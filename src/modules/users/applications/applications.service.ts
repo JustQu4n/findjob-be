@@ -10,6 +10,7 @@ import { Repository } from 'typeorm';
 import { Application } from 'src/database/entities/application/application.entity';
 import { JobSeeker } from 'src/database/entities/job-seeker/job-seeker.entity';
 import { JobPost } from 'src/database/entities/job-post/job-post.entity';
+import { Interview } from 'src/database/entities/interview/interview.entity';
 import { CloudinaryService } from 'src/modules/cloudinary/cloudinary.service';
 import { NotificationsService } from 'src/modules/notifications/notifications.service';
 import { NotificationType } from '@/common/utils/enums/notification-type.enum';
@@ -24,6 +25,8 @@ export class ApplicationsService {
     private jobSeekerRepository: Repository<JobSeeker>,
     @InjectRepository(JobPost)
     private jobPostRepository: Repository<JobPost>,
+    @InjectRepository(Interview)
+    private interviewRepository: Repository<Interview>,
     private cloudinaryService: CloudinaryService,
     private notificationsService: NotificationsService,
   ) {}
@@ -121,12 +124,30 @@ export class ApplicationsService {
     } catch (err) {
       console.error('Failed to send notifications for application:', err?.message || err);
     }
+
+    // Check if JobPost has an active Interview
+    let activeInterview: Interview | null = null;
+    if (jobPost.job_post_id) {
+      activeInterview = await this.interviewRepository
+        .createQueryBuilder('interview')
+        .where('interview.job_post_id = :jobPostId', { jobPostId: jobPost.job_post_id })
+        .andWhere('interview.status IN (:...statuses)', { statuses: ['active', 'open'] })
+        .getOne();
+    }
+
     return {
       message: 'Nộp đơn ứng tuyển thành công',
       data: await this.applicationRepository.findOne({
         where: { application_id: application.application_id },
         relations: ['jobPost', 'jobPost.company'],
       }),
+      interview: activeInterview ? {
+        interview_id: activeInterview.interview_id,
+        title: activeInterview.title,
+        description: activeInterview.description,
+        total_time_minutes: activeInterview.total_time_minutes,
+        has_interview: true,
+      } : null,
     };
   }
 
@@ -179,5 +200,69 @@ export class ApplicationsService {
       data: applicationsWithUrls,
       total: applicationsWithUrls.length,
     };
+  }
+
+  async getApplicationsWithInterviews(userId: string): Promise<any> {
+    const jobSeeker = await this.jobSeekerRepository.findOne({
+      where: { user_id: userId },
+    });
+
+    if (!jobSeeker) {
+      throw new NotFoundException('Job seeker not found');
+    }
+
+    const applications = await this.applicationRepository.find({
+      where: { job_seeker_id: jobSeeker.job_seeker_id },
+      relations: ['jobPost', 'jobPost.interviews', 'jobPost.company'],
+      order: { applied_at: 'DESC' },
+    });
+
+    // Filter applications that have interviews and get their status
+    const applicationsWithInterviews = await Promise.all(
+      applications
+        .filter(app => (app.jobPost as any)?.interviews && (app.jobPost as any).interviews.length > 0)
+        .map(async (app) => {
+          const interview = (app.jobPost as any).interviews[0]; // Get first interview
+          
+          // Check if candidate has already been assigned to this interview
+          const candidateInterview = await this.applicationRepository.manager
+            .getRepository('candidate_interviews')
+            .createQueryBuilder('ci')
+            .where('ci.application_id = :appId', { appId: app.application_id })
+            .andWhere('ci.interview_id = :interviewId', { interviewId: interview.interview_id })
+            .andWhere('ci.candidate_id = :candidateId', { candidateId: userId })
+            .getOne();
+
+          return {
+            application_id: app.application_id,
+            job_post_id: app.job_post_id,
+            status: app.status,
+            applied_at: app.applied_at,
+            jobPost: {
+              job_post_id: app.jobPost.job_post_id,
+              title: app.jobPost.title,
+              company: (app.jobPost as any).company,
+            },
+            interview: {
+              interview_id: interview.interview_id,
+              title: interview.title,
+              description: interview.description,
+              total_time_minutes: interview.total_time_minutes,
+              deadline: interview.deadline,
+              status: interview.status,
+            },
+            candidateInterview: candidateInterview ? {
+              candidate_interview_id: candidateInterview.candidate_interview_id,
+              status: candidateInterview.status,
+              assigned_at: candidateInterview.assigned_at,
+              deadline_at: candidateInterview.deadline_at,
+              started_at: candidateInterview.started_at,
+              completed_at: candidateInterview.completed_at,
+            } : null,
+          };
+        })
+    );
+
+    return applicationsWithInterviews;
   }
 }

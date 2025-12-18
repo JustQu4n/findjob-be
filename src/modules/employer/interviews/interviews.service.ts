@@ -37,6 +37,8 @@ export class InterviewsService {
       title: dto.title,
       description: dto.description || null,
       status: dto.status || 'draft',
+      total_time_minutes: dto.total_time_minutes || null,
+      deadline: dto.deadline ? new Date(dto.deadline) : null,
     } as any);
 
     return this.interviewRepo.save(iv);
@@ -99,13 +101,66 @@ export class InterviewsService {
 
   // Candidate interviews / answers
   async listCandidateInterviews(interviewId: string) {
-    return this.candidateInterviewRepo.find({ where: { interview_id: interviewId } });
+    const cis = await this.candidateInterviewRepo.find({
+      where: { interview_id: interviewId },
+      relations: ['candidate'],
+      order: { assigned_at: 'DESC' as const },
+    });
+
+    return cis.map(ci => ({
+      candidate_interview_id: ci.candidate_interview_id,
+      interview_id: ci.interview_id,
+      application_id: ci.application_id,
+      candidate_id: ci.candidate_id,
+      assigned_by: ci.assigned_by,
+      assigned_at: ci.assigned_at,
+      started_at: ci.started_at,
+      completed_at: ci.completed_at,
+      status: ci.status,
+      total_score: ci.total_score,
+      result: ci.result,
+      metadata: ci.metadata,
+      created_at: ci.created_at,
+      updated_at: ci.updated_at,
+      candidate: ci.candidate ? {
+        user_id: ci.candidate.user_id,
+        full_name: ci.candidate.full_name,
+        email: ci.candidate.email,
+        phone: ci.candidate.phone,
+        avatar_url: ci.candidate.avatar_url,
+      } : null,
+    }));
   }
 
   async listAnswers(candidateInterviewId: string) {
-    return this.answerRepo.find({ where: { candidate_interview_id: candidateInterviewId } });
+    const answers = await this.answerRepo
+      .createQueryBuilder('answer')
+      .leftJoinAndSelect('answer.question', 'question')
+      .leftJoinAndSelect('answer.candidateInterview', 'ci')
+      .leftJoinAndSelect('ci.candidate', 'candidate')
+      .where('answer.candidate_interview_id = :candidateInterviewId', { candidateInterviewId })
+      .getMany();
+ return answers.map(answer => ({
+      interview_answer_id: answer.interview_answer_id,
+      candidate_interview_id: answer.candidate_interview_id,
+      question_id: answer.question_id,
+      question: answer.question?.question_text || null,
+      answer_text: answer.answer_text,
+      elapsed_seconds: answer.elapsed_seconds,
+      score: answer.score,
+      graded_by: answer.graded_by,
+      graded_at: answer.graded_at,
+      feedback: answer.feedback,
+      created_at: answer.created_at,
+      updated_at: answer.updated_at,
+      candidate: answer.candidateInterview?.candidate ? {
+        user_id: answer.candidateInterview.candidate.user_id,
+        full_name: answer.candidateInterview.candidate.full_name,
+        email: answer.candidateInterview.candidate.email,
+        avatar_url: answer.candidateInterview.candidate.avatar_url,
+      } : null,
+    }));
   }
-
   async getAnswer(answerId: string) {
     const a = await this.answerRepo.findOne({ where: { interview_answer_id: answerId } });
     if (!a) throw new NotFoundException('Answer not found');
@@ -127,7 +182,79 @@ export class InterviewsService {
 
     return a;
   }
+
+  async getInterviewDetails(userId: string, interviewId: string) {
+    const iv = await this.findInterview(interviewId);
+    const emp = await this.resolveEmployerUser(userId);
+    if (iv.employer_id !== emp.employer_id) throw new ForbiddenException('Not allowed');
+
+    const [questions, assignments] = await Promise.all([
+      this.questionRepo.find({ where: { interview_id: interviewId }, order: { created_at: 'ASC' as const } }),
+      this.candidateInterviewRepo.find({ where: { interview_id: interviewId }, order: { assigned_at: 'DESC' as const } }),
+    ]);
+
+    return { interview: iv, questions, assignments };
+  }
+
+  async listInterviews(userId: string) {
+    const emp = await this.resolveEmployerUser(userId);
+    return this.interviewRepo.find({ where: { employer_id: emp.employer_id }, order: { created_at: 'DESC' as const } });
+  }
+
+  async attachInterviewToJobPost(userId: string, interviewId: string, jobPostId: string) {
+    const iv = await this.findInterview(interviewId);
+    const emp = await this.resolveEmployerUser(userId);
+    if (iv.employer_id !== emp.employer_id) throw new ForbiddenException('Not allowed');
+    
+    iv.job_post_id = jobPostId;
+    await this.interviewRepo.save(iv);
+    return { message: 'Interview attached to job post successfully', interview: iv };
+  }
+
+  async detachInterviewFromJobPost(userId: string, interviewId: string) {
+    const iv = await this.findInterview(interviewId);
+    const emp = await this.resolveEmployerUser(userId);
+    if (iv.employer_id !== emp.employer_id) throw new ForbiddenException('Not allowed');
+    
+    iv.job_post_id = null;
+    await this.interviewRepo.save(iv);
+    return { message: 'Interview detached from job post successfully', interview: iv };
+  }
+  async getInterviewStatistics(userId: string, interviewId: string) {
+    const iv = await this.findInterview(interviewId);
+    const emp = await this.resolveEmployerUser(userId);
+    if (iv.employer_id !== emp.employer_id) throw new ForbiddenException('Not allowed');
+
+    const assignments = await this.candidateInterviewRepo.find({ 
+      where: { interview_id: interviewId },
+      relations: ['candidate'],
+    });
+
+    const stats = {
+      total: assignments.length,
+      assigned: assignments.filter(a => a.status === 'assigned').length,
+      in_progress: assignments.filter(a => a.status === 'in_progress').length,
+      submitted: assignments.filter(a => a.status === 'submitted').length,
+      timeout: assignments.filter(a => a.status === 'timeout').length,
+      average_score: 0,
+      candidates: assignments.map(a => ({
+        candidate_interview_id: a.candidate_interview_id,
+        candidate_name: a.candidate?.full_name || 'Unknown',
+        candidate_email: a.candidate?.email || 'Unknown',
+        candidate_avatar_url: a.candidate?.avatar_url || null,
+        status: a.status,
+        total_score: a.total_score,
+        assigned_at: a.assigned_at,
+        started_at: a.started_at,
+        completed_at: a.completed_at,
+      })),
+    };
+
+    const submittedScores = assignments.filter(a => a.status === 'submitted' && a.total_score != null).map(a => Number(a.total_score));
+    if (submittedScores.length > 0) {
+      stats.average_score = submittedScores.reduce((sum, s) => sum + s, 0) / submittedScores.length;
+    }
+
+    return stats;
+  }
 }
-
-
-

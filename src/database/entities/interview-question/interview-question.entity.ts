@@ -12,7 +12,10 @@ export class InterviewQuestion {
   question_text: string;
 
   @Column({ type: 'int', nullable: true })
-  time_limit_seconds: number | null;
+  time_limit_seconds: number | null; // Thời gian cho câu hỏi này
+
+  @Column({ type: 'int', default: 1 })
+  order_index: number; // Thứ tự câu hỏi (1, 2, 3...)
 
   @Column({ type: 'numeric', default: 0 })
   max_score: number;

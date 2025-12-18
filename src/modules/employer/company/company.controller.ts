@@ -7,7 +7,11 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  Patch,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { CompanyService } from './company.service';
 import { UpdateCompanyDto } from './dto';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
@@ -44,5 +48,18 @@ export class CompanyController {
     @Body() updateDto: UpdateCompanyDto,
   ) {
     return this.companyService.updateCompany(userId, companyId, updateDto);
+  }
+  
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('employer')
+  @Patch(':company_id/avatar')
+  @UseInterceptors(FileInterceptor('avatar'))
+  @HttpCode(HttpStatus.OK)
+  async updateCompanyAvatar(
+    @GetUser('user_id') userId: string,
+    @Param('company_id') companyId: string,
+    @UploadedFile() avatar: Express.Multer.File,
+  ) {
+    return this.companyService.updateCompanyAvatar(userId, companyId, avatar);
   }
 }

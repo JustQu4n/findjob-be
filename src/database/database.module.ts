@@ -17,6 +17,7 @@ import databaseConfig from "src/config/database.config";
         const baseOptions: any = {
           type: 'postgres',
           entities: [__dirname + '/**/*.entity{.ts,.js}'],
+          subscribers: [__dirname + '/**/*.subscriber{.ts,.js}'],
           synchronize: false,
           logging: configService.get('database.logging'),
         };

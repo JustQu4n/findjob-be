@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
+import { v4 as uuidv4 } from 'uuid';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, In } from 'typeorm';
 import { JobPost } from 'src/database/entities/job-post/job-post.entity';
@@ -65,6 +66,10 @@ export class JobPostService {
 
     jobPost.employer_id = employer.employer_id;
     jobPost.company_id = employer.company_id;
+
+    // Ensure job_post_id is generated on the application side in case the
+    // database table lacks a UUID default (e.g., migrations/sync disabled).
+    jobPost.job_post_id = uuidv4();
 
     if (createJobPostDto.expires_at) {
       jobPost.expires_at = new Date(createJobPostDto.expires_at);

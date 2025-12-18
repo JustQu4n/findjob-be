@@ -7,9 +7,10 @@ import { JobPost } from 'src/database/entities/job-post/job-post.entity';
 
 import { CompanyService } from './company.service';
 import { CompanyController } from './company.controller';
+import { CloudinaryModule } from 'src/modules/cloudinary/cloudinary.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Company, Employer, JobPost])],
+  imports: [TypeOrmModule.forFeature([Company, Employer, JobPost]), CloudinaryModule],
   controllers: [CompanyController],
   providers: [CompanyService],
   exports: [CompanyService],

@@ -8,7 +8,11 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  Patch,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ProfileService } from './profile.service';
 import { UpdateEmployerDto } from './dto';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
@@ -46,5 +50,17 @@ export class ProfileController {
   @HttpCode(HttpStatus.OK)
   async findOne(@Param('id') id: string) {
     return this.profileService.findOneById(id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('employer')
+  @Patch('avatar')
+  @UseInterceptors(FileInterceptor('avatar'))
+  @HttpCode(HttpStatus.OK)
+  async updateAvatar(
+    @GetUser('user_id') userId: string,
+    @UploadedFile() avatar: Express.Multer.File,
+  ) {
+    return this.profileService.updateAvatar(userId, avatar);
   }
 }

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { InterviewQuestion } from 'src/database/entities/interview-question/interview-question.entity';
@@ -6,9 +6,13 @@ import { CandidateInterview } from 'src/database/entities/candidate-interview/ca
 import { InterviewAnswer } from 'src/database/entities/interview-answer/interview-answer.entity';
 import { Interview } from 'src/database/entities/interview/interview.entity';
 import { Employer } from 'src/database/entities/employer/employer.entity';
+import { User } from 'src/database/entities/user/user.entity';
 import { CreateQuestionDto } from './dto/create-question.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { GradeAnswerDto } from './dto/grade-answer.dto';
+import { InviteCandidateDto } from './dto/invite-candidate.dto';
+import { NotificationsService } from '@/modules/notifications/notifications.service';
+import { EmailService } from '@/modules/email/email.service';
 
 @Injectable()
 export class InterviewsService {
@@ -23,6 +27,10 @@ export class InterviewsService {
     private readonly interviewRepo: Repository<Interview>,
     @InjectRepository(Employer)
     private readonly employerRepo: Repository<Employer>,
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
+    private readonly notificationsService: NotificationsService,
+    private readonly emailService: EmailService,
   ) {}
   
   // Create interview session
@@ -256,5 +264,100 @@ export class InterviewsService {
     }
 
     return stats;
+  }
+
+  async inviteCandidateToInterview(userId: string, interviewId: string, dto: InviteCandidateDto) {
+    // Verify employer owns this interview
+    const iv = await this.findInterview(interviewId);
+    const emp = await this.resolveEmployerUser(userId);
+    if (iv.employer_id !== emp.employer_id) throw new ForbiddenException('Not allowed');
+
+    // Find user by email
+    const user = await this.userRepo.findOne({ where: { email: dto.email } });
+    if (!user) {
+      throw new NotFoundException(`User with email ${dto.email} not found`);
+    }
+
+    // Check if already invited or applied
+    const existing = await this.candidateInterviewRepo.findOne({
+      where: { interview_id: interviewId, candidate_id: user.user_id },
+    });
+    if (existing) {
+      throw new BadRequestException('User is already invited or has applied to this interview');
+    }
+
+    // Calculate deadline
+    let deadlineAt: Date | null = null;
+    if (iv.deadline) {
+      deadlineAt = new Date();
+      deadlineAt.setDate(deadlineAt.getDate() + Math.floor(iv.deadline.getTime() / (1000 * 60 * 60 * 24)));
+    }
+
+    // Create candidate interview record
+    const candidateInterview = this.candidateInterviewRepo.create({
+      interview_id: interviewId,
+      application_id: null, // No application, direct invitation
+      candidate_id: user.user_id,
+      invitation_email: dto.email,
+      assigned_by: userId,
+      assigned_at: new Date(),
+      deadline_at: deadlineAt,
+      status: 'assigned',
+      result: 'pending',
+    } as any);
+
+    const savedResult = await this.candidateInterviewRepo.save(candidateInterview);
+    const saved = Array.isArray(savedResult) ? savedResult[0] : savedResult;
+
+    // Send notification
+    try {
+      await this.notificationsService.sendToUser(user.user_id, {
+        type: 'interview_invitation',
+        message: `You have been invited to take the interview: ${iv.title}`,
+        metadata: {
+          interview_id: interviewId,
+          interview_title: iv.title,
+          candidate_interview_id: saved.candidate_interview_id,
+          deadline_at: deadlineAt,
+          custom_message: dto.message,
+        },
+      });
+    } catch (error) {
+      console.error('Failed to send notification:', error);
+    }
+
+    // Send email
+    try {
+      await this.emailService.sendInterviewInvitationEmail(
+        user.email,
+        user.full_name,
+        iv.title,
+        iv.description || '',
+        saved.candidate_interview_id,
+        deadlineAt,
+        dto.message,
+      );
+    } catch (error) {
+      console.error('Failed to send email:', error);
+    }
+
+    return {
+      message: 'Candidate invited successfully',
+      candidateInterview: {
+        candidate_interview_id: saved.candidate_interview_id,
+        interview_id: saved.interview_id,
+        candidate_id: saved.candidate_id,
+        invitation_email: saved.invitation_email,
+        assigned_at: saved.assigned_at,
+        deadline_at: saved.deadline_at,
+        status: saved.status,
+      },
+      candidate: {
+        user_id: user.user_id,
+        full_name: user.full_name,
+        email: user.email,
+        avatar_url: user.avatar_url,
+      },
+    };
   }
 }

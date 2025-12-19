@@ -4,4 +4,5 @@ export enum NotificationType {
   APPLICATION_STATUS_UPDATED = 'application_status_updated',
   INTERVIEW_REMINDER = 'interview_reminder',
   INTERVIEW_ASSIGNED = 'interview_assigned',
+  INTERVIEW_SUBMITTED = 'interview_submitted',
 }

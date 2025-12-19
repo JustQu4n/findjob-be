@@ -49,6 +49,31 @@ export class EmailService {
     });
   }
 
+  async sendInterviewInvitationEmail(
+    email: string,
+    name: string,
+    interviewTitle: string,
+    interviewDescription: string,
+    candidateInterviewId: string,
+    deadline: Date | null,
+    customMessage?: string,
+  ): Promise<void> {
+    const interviewUrl = `${this.configService.get('FRONTEND_URL')}/interview/${candidateInterviewId}`;
+
+    await this.mailerService.sendMail({
+      to: email,
+      subject: `Lời mời tham gia phỏng vấn: ${interviewTitle}`,
+      html: this.getInterviewInvitationTemplate(
+        name,
+        interviewTitle,
+        interviewDescription,
+        interviewUrl,
+        deadline,
+        customMessage,
+      ),
+    });
+  }
+
   private getVerificationEmailTemplate(name: string, verificationUrl: string): string {
     return `
       <!DOCTYPE html>
@@ -217,5 +242,93 @@ export class EmailService {
     };
 
     return features[role] || features.job_seeker;
+  }
+
+  private getInterviewInvitationTemplate(
+    name: string,
+    interviewTitle: string,
+    interviewDescription: string,
+    interviewUrl: string,
+    deadline: Date | null,
+    customMessage?: string,
+  ): string {
+    const deadlineText = deadline
+      ? `<p><strong>⏰ Hạn chót:</strong> ${deadline.toLocaleDateString('vi-VN', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })}</p>`
+      : '';
+
+    const customMessageHtml = customMessage
+      ? `
+        <div style="background-color: #E0F2FE; border-left: 4px solid #0EA5E9; padding: 15px; margin: 20px 0; border-radius: 5px;">
+          <p style="margin: 0;"><strong>📝 Thông điệp từ nhà tuyển dụng:</strong></p>
+          <p style="margin: 10px 0 0 0;">${customMessage}</p>
+        </div>
+      `
+      : '';
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background-color: #7C3AED; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
+          .content { background-color: #f9f9f9; padding: 30px; border-radius: 0 0 5px 5px; }
+          .button { display: inline-block; padding: 12px 30px; background-color: #7C3AED; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+          .info-box { background-color: white; padding: 15px; border-radius: 5px; margin: 15px 0; }
+          .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🎯 Lời mời tham gia phỏng vấn</h1>
+          </div>
+          <div class="content">
+            <h2>Xin chào ${name},</h2>
+            <p>Bạn đã được mời tham gia phỏng vấn trực tuyến!</p>
+            
+            <div class="info-box">
+              <h3 style="margin-top: 0;">📋 Thông tin phỏng vấn</h3>
+              <p><strong>Tiêu đề:</strong> ${interviewTitle}</p>
+              ${interviewDescription ? `<p><strong>Mô tả:</strong> ${interviewDescription}</p>` : ''}
+              ${deadlineText}
+            </div>
+
+            ${customMessageHtml}
+            
+            <div style="text-align: center;">
+              <a href="${interviewUrl}" class="button">Tham gia phỏng vấn ngay</a>
+            </div>
+            
+            <p>Hoặc copy link sau vào trình duyệt:</p>
+            <p style="word-break: break-all; background-color: #e9ecef; padding: 10px; border-radius: 5px;">
+              ${interviewUrl}
+            </p>
+
+            <div style="background-color: #FEF3C7; border-left: 4px solid #F59E0B; padding: 15px; margin: 20px 0; border-radius: 5px;">
+              <p style="margin: 0;"><strong>💡 Lưu ý:</strong></p>
+              <ul style="margin: 10px 0 0 0;">
+                <li>Đảm bảo kết nối internet ổn định</li>
+                <li>Chuẩn bị sẵn sàng trước khi bắt đầu</li>
+                ${deadline ? '<li>Hoàn thành trước hạn chót để đảm bảo bài làm được ghi nhận</li>' : ''}
+                <li>Chúc bạn may mắn!</li>
+              </ul>
+            </div>
+          </div>
+          <div class="footer">
+            <p>&copy; 2024 CareerVibe. All rights reserved.</p>
+            <p>Email này được gửi tự động, vui lòng không trả lời.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
   }
 }

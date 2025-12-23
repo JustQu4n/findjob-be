@@ -71,6 +71,11 @@ export class UpdateCompanyDto {
   logo_url?: string;
 
   @IsOptional()
+  @IsUrl({}, { message: 'Cover URL phải là URL hợp lệ' })
+  @MaxLength(500, { message: 'Cover URL không được vượt quá 500 ký tự' })
+  cover_url?: string;
+
+  @IsOptional()
   @IsString()
   @MaxLength(500, { message: 'Địa chỉ liên hệ không được vượt quá 500 ký tự' })
   contact_address?: string;

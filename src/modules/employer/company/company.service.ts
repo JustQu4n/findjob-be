@@ -150,4 +150,49 @@ export class CompanyService {
       data: { logo_url: logoUrl },
     };
   }
+
+  async updateCompanyCover(userId: string, companyId: string, cover: Express.Multer.File) {
+    if (!cover) {
+      throw new BadRequestException('Vui lòng chọn file cover');
+    }
+
+    const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedMimeTypes.includes(cover.mimetype)) {
+      throw new BadRequestException('File cover không hợp lệ. Chỉ chấp nhận JPG, PNG, GIF, WEBP');
+    }
+
+    // Verify employer belongs to this company
+    const employer = await this.employerRepository.findOne({ where: { user_id: userId } });
+    if (!employer) {
+      throw new NotFoundException('Không tìm thấy thông tin nhà tuyển dụng');
+    }
+
+    if (employer.company_id !== companyId) {
+      throw new ForbiddenException('Bạn không có quyền cập nhật thông tin công ty này');
+    }
+
+    const company = await this.companyRepository.findOne({ where: { company_id: companyId } });
+    if (!company) {
+      throw new NotFoundException('Không tìm thấy công ty');
+    }
+
+    // Delete old cover if exists
+    if ((company as any).cover_url) {
+      try {
+        await this.cloudinaryService.deleteFile((company as any).cover_url);
+      } catch (err) {
+        console.warn('Failed to delete old company cover:', err?.message || err);
+      }
+    }
+
+    // Upload new cover
+    const coverUrl = await this.cloudinaryService.uploadFile(cover, 'company_covers');
+    (company as any).cover_url = coverUrl;
+    await this.companyRepository.save(company);
+
+    return {
+      message: 'Cập nhật ảnh bìa công ty thành công',
+      data: { cover_url: coverUrl },
+    };
+  }
 }

@@ -62,4 +62,17 @@ export class CompanyController {
   ) {
     return this.companyService.updateCompanyAvatar(userId, companyId, avatar);
   }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('employer')
+  @Patch(':company_id/cover')
+  @UseInterceptors(FileInterceptor('cover'))
+  @HttpCode(HttpStatus.OK)
+  async updateCompanyCover(
+    @GetUser('user_id') userId: string,
+    @Param('company_id') companyId: string,
+    @UploadedFile() cover: Express.Multer.File,
+  ) {
+    return this.companyService.updateCompanyCover(userId, companyId, cover);
+  }
 }

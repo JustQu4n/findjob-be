@@ -59,8 +59,12 @@ export class ProfileService {
 
     // Get avatar URL if exists (Cloudinary URLs are permanent)
     let avatar_url: string | null = null;
+    let cover_url: string | null = null;
     if (jobSeeker.avatar_url) {
       avatar_url = await this.cloudinaryService.getFileUrl(jobSeeker.avatar_url);
+    }
+    if (jobSeeker.cover_url) {
+      cover_url = await this.cloudinaryService.getFileUrl(jobSeeker.cover_url);
     }
 
     // Format experiences
@@ -116,6 +120,7 @@ export class ProfileService {
         user_id: jobSeeker.user_id,
         resume_url: jobSeeker.resume_url,
         avatar_url,
+        cover_url,
         bio: jobSeeker.bio,
         user: jobSeeker.user,
         experiences,
@@ -223,6 +228,54 @@ export class ProfileService {
       data: {
         avatar_url: avatarUrl,
         avatar_download_url: avatarUrl,
+      },
+    };
+  }
+
+  async updateCover(userId: string, cover: Express.Multer.File) {
+    if (!cover) {
+      throw new BadRequestException('Vui lòng chọn file cover');
+    }
+
+    const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+    if (!allowedMimeTypes.includes(cover.mimetype)) {
+      throw new BadRequestException(
+        'File cover không hợp lệ. Chỉ chấp nhận JPG, PNG, GIF',
+      );
+    }
+
+    const jobSeeker = await this.jobSeekerRepository.findOne({
+      where: { user_id: userId },
+      relations: ['user'],
+    });
+
+    if (!jobSeeker) {
+      throw new NotFoundException('Không tìm thấy hồ sơ người tìm việc');
+    }
+
+    // Delete old cover if exists
+    if (jobSeeker.cover_url) {
+      try {
+        await this.cloudinaryService.deleteFile(jobSeeker.cover_url);
+      } catch (error) {
+        console.log('Failed to delete old cover:', error.message);
+      }
+    }
+
+    // Upload new cover to Cloudinary
+    const coverUrl = await this.cloudinaryService.uploadFile(cover, 'covers');
+
+    jobSeeker.cover_url = coverUrl;
+    jobSeeker.user.cover_url = coverUrl;
+
+    await this.jobSeekerRepository.save(jobSeeker);
+    await this.userRepository.save(jobSeeker.user);
+
+    return {
+      message: 'Cập nhật ảnh bìa hồ sơ thành công',
+      data: {
+        cover_url: coverUrl,
+        cover_download_url: coverUrl,
       },
     };
   }

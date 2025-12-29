@@ -6,6 +6,7 @@ import { UsersModule } from './modules/users/users.module';
 import { DatabaseModule } from './database/database.module';
 import { AiAssistantModule } from './modules/ai-assistant/ai-assistant.module';
 import { PostsModule } from './modules/posts/posts.module';
+import { InterviewScoringModule } from './modules/interview-scoring/interview-scoring.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { PostsModule } from './modules/posts/posts.module';
     DatabaseModule,
     AiAssistantModule,
     PostsModule,
+    InterviewScoringModule,
   ],
   controllers: [],
   providers: [],

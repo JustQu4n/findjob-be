@@ -65,6 +65,18 @@ export class ProfileController {
     return this.jobSeekerService.updateAvatar(userId, avatar);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('jobseeker')
+  @Patch('cover')
+  @UseInterceptors(FileInterceptor('cover'))
+  @HttpCode(HttpStatus.OK)
+  async updateCover(
+    @GetUser('user_id') userId: string,
+    @UploadedFile() cover: Express.Multer.File,
+  ) {
+    return this.jobSeekerService.updateCover(userId, cover);
+  }
+
   @Public()
   @Get(':id/applications')
   @HttpCode(HttpStatus.OK)

@@ -10,7 +10,7 @@ import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 
 import { User } from 'src/database/entities/user/user.entity';
 import { Role } from 'src/database/entities/role/role.entity';
@@ -60,7 +60,7 @@ export class AuthService {
     const password_hash = await bcrypt.hash(password, salt);
 
     // Generate email verification token
-    const email_verification_token = uuidv4();
+    const email_verification_token = randomUUID();
     const email_verification_token_expires = new Date();
     email_verification_token_expires.setHours(email_verification_token_expires.getHours() + 24);
 
@@ -154,7 +154,7 @@ export class AuthService {
     const password_hash = await bcrypt.hash(password, salt);
 
     // Generate email verification token
-    const email_verification_token = uuidv4();
+    const email_verification_token = randomUUID();
     const email_verification_token_expires = new Date();
     email_verification_token_expires.setHours(email_verification_token_expires.getHours() + 24);
 
@@ -255,7 +255,7 @@ export class AuthService {
     const password_hash = await bcrypt.hash(password, salt);
 
     // Generate email verification token
-    const email_verification_token = uuidv4();
+    const email_verification_token = randomUUID();
     const email_verification_token_expires = new Date();
     email_verification_token_expires.setHours(email_verification_token_expires.getHours() + 24);
 
@@ -392,7 +392,7 @@ export class AuthService {
     }
 
     // Generate new token
-    const email_verification_token = uuidv4();
+    const email_verification_token = randomUUID();
     const email_verification_token_expires = new Date();
     email_verification_token_expires.setHours(email_verification_token_expires.getHours() + 24);
 
@@ -571,7 +571,7 @@ export class AuthService {
     }
 
     // Generate reset token
-    const password_reset_token = uuidv4();
+    const password_reset_token = randomUUID();
     const password_reset_token_expires = new Date();
     password_reset_token_expires.setHours(password_reset_token_expires.getHours() + 1);
 

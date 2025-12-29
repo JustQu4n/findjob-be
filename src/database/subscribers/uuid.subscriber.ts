@@ -1,5 +1,5 @@
 import { EventSubscriber, EntitySubscriberInterface, InsertEvent } from 'typeorm';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 
 @EventSubscriber()
 export class UuidSubscriber implements EntitySubscriberInterface<any> {
@@ -11,7 +11,7 @@ export class UuidSubscriber implements EntitySubscriberInterface<any> {
       if (column.isPrimary && (column.type === 'uuid' || column.type === 'character varying' && column.propertyName.endsWith('_id'))) {
         const propName = column.propertyName as string;
         if (!event.entity[propName]) {
-          event.entity[propName] = uuidv4();
+          event.entity[propName] = randomUUID();
         }
       }
     }

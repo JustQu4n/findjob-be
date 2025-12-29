@@ -1,5 +1,5 @@
 import { Repository } from 'typeorm';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 
 // Patch Repository.save to set UUID primary keys if missing
 const origSave = (Repository.prototype as any).save;
@@ -13,7 +13,7 @@ const origSave = (Repository.prototype as any).save;
       for (const column of metadata.columns) {
         if (column.isPrimary && column.type === 'uuid') {
           const prop = column.propertyName as string;
-          if (!entity[prop]) entity[prop] = uuidv4();
+          if (!entity[prop]) entity[prop] = randomUUID();
         }
       }
     };

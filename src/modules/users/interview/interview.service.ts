@@ -6,6 +6,8 @@ import { InterviewQuestion } from 'src/database/entities/interview-question/inte
 import { InterviewAnswer } from 'src/database/entities/interview-answer/interview-answer.entity';
 import { Application } from 'src/database/entities/application/application.entity';
 import { Interview } from 'src/database/entities/interview/interview.entity';
+import { Employer } from 'src/database/entities/employer/employer.entity';
+import { User } from 'src/database/entities/user/user.entity';
 import { SubmitAnswersDto } from './dto/submit-answers.dto';
 import { NotificationsService } from 'src/modules/notifications/notifications.service';
 import { EmailService } from 'src/modules/email/email.service';
@@ -24,6 +26,10 @@ export class UsersInterviewService {
     private readonly applicationRepo: Repository<Application>,
     @InjectRepository(Interview)
     private readonly interviewRepo: Repository<Interview>,
+    @InjectRepository(Employer)
+    private readonly employerRepo: Repository<Employer>,
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
     private readonly notificationsService: NotificationsService,
     private readonly emailService: EmailService,
   ) {}
@@ -35,7 +41,14 @@ export class UsersInterviewService {
       order: { assigned_at: 'DESC' },
     });
 
-    return assignments;
+    // Map the assignments and handle null application (direct invitation)
+    return assignments.map(ci => ({
+      ...ci,
+      isDirectInvitation: !ci.application_id,
+      invitationEmail: ci.invitation_email || null,
+      jobPost: (ci as any).application?.jobPost || null,
+      company: (ci as any).application?.jobPost?.company || null,
+    }));
   }
 
   async getInterviewHistory(userId: string) {
@@ -68,6 +81,8 @@ export class UsersInterviewService {
             title: (ci as any).interview?.title,
             description: (ci as any).interview?.description,
           },
+          isDirectInvitation: !ci.application_id,
+          invitationEmail: ci.invitation_email || null,
           jobPost: (ci as any).application?.jobPost ? {
             job_post_id: (ci as any).application.jobPost.job_post_id,
             title: (ci as any).application.jobPost.title,
@@ -171,6 +186,44 @@ export class UsersInterviewService {
     ci.completed_at = new Date();
     ci.status = 'submitted';
     await this.candidateInterviewRepo.save(ci);
+
+    // Notify employer that candidate submitted the interview
+    try {
+      const interview = await this.interviewRepo.findOne({ where: { interview_id: ci.interview_id } });
+      if (interview && interview.employer_id) {
+        const employer = await this.employerRepo.findOne({ where: { employer_id: interview.employer_id }, relations: ['user'] });
+        if (employer && (employer as any).user) {
+          const employerUser = (employer as any).user as User;
+          const candidateUser = await this.userRepo.findOne({ where: { user_id: userId } });
+
+          await this.notificationsService.sendToUser(employerUser.user_id, {
+            type: NotificationType.INTERVIEW_SUBMITTED,
+            message: `${candidateUser?.full_name || 'A candidate'} vừa nộp bài cho bài interview "${interview.title}"`,
+            metadata: {
+              candidate_interview_id: ci.candidate_interview_id,
+              interview_id: ci.interview_id,
+              candidate_id: ci.candidate_id,
+            },
+          });
+
+          // Send email to employer (best-effort)
+          if (employerUser.email) {
+            const frontendUrl = process.env.FRONTEND_URL || '';
+            const link = `${frontendUrl}/employer/interviews/${interview.interview_id}/candidates/${ci.candidate_interview_id}`;
+            const subject = `Ứng viên đã nộp bài cho interview "${interview.title}"`;
+            const html = `
+              <h3>Ứng viên đã nộp bài</h3>
+              <p>Xin chào ${employerUser.full_name || ''},</p>
+              <p>Ứng viên <strong>${candidateUser?.full_name || 'A candidate'}</strong> đã nộp bài cho interview "${interview.title}".</p>
+              <p>Chi tiết: <a href="${link}">Xem bài làm</a></p>
+            `;
+            await this.emailService.sendApplicationStatusEmail(employerUser.email, subject, html);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to notify employer about submitted interview', err);
+    }
 
     return { ok: true };
   }

@@ -62,6 +62,9 @@ export class Company {
   @Column({ type: 'varchar', length: 500, nullable: true })
   logo_url: string;
 
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  cover_url: string;
+
   // Contact information
   @Column({ type: 'varchar', length: 500, nullable: true })
   contact_address: string;

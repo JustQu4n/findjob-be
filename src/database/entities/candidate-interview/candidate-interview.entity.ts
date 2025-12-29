@@ -12,11 +12,14 @@ export class CandidateInterview {
   @Column({ type: 'uuid' })
   interview_id: string;
 
-  @Column({ type: 'uuid' })
-  application_id: string;
+  @Column({ type: 'uuid', nullable: true })
+  application_id: string | null;
 
   @Column({ type: 'uuid' })
   candidate_id: string;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  invitation_email: string | null; // Email used for invitation (if invited directly)
 
   @ManyToOne(() => User)
   @JoinColumn({ name: 'candidate_id' })
@@ -60,7 +63,7 @@ export class CandidateInterview {
   @JoinColumn({ name: 'interview_id' })
   interview: Interview;
 
-  @ManyToOne(() => Application, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Application, { onDelete: 'CASCADE', nullable: true })
   @JoinColumn({ name: 'application_id' })
-  application: Application;
+  application: Application | null;
 }

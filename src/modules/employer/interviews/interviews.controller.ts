@@ -20,6 +20,7 @@ import { UpdateQuestionDto } from './dto/update-question.dto';
 import { GradeAnswerDto } from './dto/grade-answer.dto';
 import { CreateInterviewDto } from './dto/create-interview.dto';
 import { UpdateInterviewDto } from './dto/update-interview.dto';
+import { InviteCandidateDto } from './dto/invite-candidate.dto';
 
 @Controller('employer/interviews')
 export class InterviewsController {
@@ -79,6 +80,14 @@ export class InterviewsController {
   @HttpCode(HttpStatus.OK)
   async attachJobPost(@GetUser('user_id') userId: string, @Param('interviewId') interviewId: string, @Body() body: { job_post_id: string }) {
     return this.service.attachInterviewToJobPost(userId, interviewId, body.job_post_id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('employer')
+  @HttpPost(':interviewId/invite-candidate')
+  @HttpCode(HttpStatus.OK)
+  async inviteCandidate(@GetUser('user_id') userId: string, @Param('interviewId') interviewId: string, @Body() dto: InviteCandidateDto) {
+    return this.service.inviteCandidateToInterview(userId, interviewId, dto);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

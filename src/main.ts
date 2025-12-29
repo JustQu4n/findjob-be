@@ -35,3 +35,12 @@ async function bootstrap() {
   console.log(`✅Application is running on: http://localhost:${port}`);
 }
 bootstrap();
+
+
+// Export để Vercel có thể nhận diện
+export default async (req: any, res: any) => {
+  const app = await NestFactory.create(AppModule);
+  await app.init();
+  const instance = app.getHttpAdapter().getInstance();
+  instance(req, res);
+};

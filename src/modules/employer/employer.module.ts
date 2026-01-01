@@ -7,6 +7,7 @@ import { ApplicationModule } from './application/application.module';
 import { JobSeekerModule } from './job-seeker/job-seeker.module';
 import { InterviewsModule } from './interviews/interviews.module';
 import { StatsModule } from './stats/stats.module';
+import { MessagingModule } from './messaging/messaging.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { StatsModule } from './stats/stats.module';
     JobSeekerModule,
     InterviewsModule,
     StatsModule,
+    MessagingModule,
   ],
   controllers: [],
   providers: [],

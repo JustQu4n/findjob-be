@@ -74,6 +74,26 @@ export class EmailService {
     });
   }
 
+  async sendEmployerMessageToUser(
+    email: string,
+    userName: string,
+    employerName: string,
+    companyName: string,
+    subject: string,
+    message: string,
+  ): Promise<void> {
+    await this.mailerService.sendMail({
+      to: email,
+      subject: subject,
+      html: this.getEmployerMessageTemplate(
+        userName,
+        employerName,
+        companyName,
+        message,
+      ),
+    });
+  }
+
   private getVerificationEmailTemplate(name: string, verificationUrl: string): string {
     return `
       <!DOCTYPE html>
@@ -321,6 +341,62 @@ export class EmailService {
                 <li>Chúc bạn may mắn!</li>
               </ul>
             </div>
+          </div>
+          <div class="footer">
+            <p>&copy; 2024 CareerVibe. All rights reserved.</p>
+            <p>Email này được gửi tự động, vui lòng không trả lời.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  private getEmployerMessageTemplate(
+    userName: string,
+    employerName: string,
+    companyName: string,
+    message: string,
+  ): string {
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background-color: #4F46E5; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
+          .content { background-color: #f9f9f9; padding: 30px; border-radius: 0 0 5px 5px; }
+          .message-box { background-color: white; padding: 20px; border-left: 4px solid #4F46E5; border-radius: 5px; margin: 20px 0; }
+          .company-info { background-color: #F3F4F6; padding: 15px; border-radius: 5px; margin: 15px 0; }
+          .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>💼 Tin nhắn từ Nhà tuyển dụng</h1>
+          </div>
+          <div class="content">
+            <h2>Xin chào ${userName},</h2>
+            <p>Bạn có một tin nhắn mới từ nhà tuyển dụng trên <strong>CareerVibe</strong>!</p>
+            
+            <div class="company-info">
+              <p style="margin: 0;"><strong>👤 Người gửi:</strong> ${employerName}</p>
+              <p style="margin: 5px 0 0 0;"><strong>🏢 Công ty:</strong> ${companyName}</p>
+            </div>
+
+            <div class="message-box">
+              <h3 style="margin-top: 0; color: #4F46E5;">📨 Nội dung tin nhắn:</h3>
+              <p style="white-space: pre-wrap;">${message}</p>
+            </div>
+
+            <div style="background-color: #FEF3C7; border-left: 4px solid #F59E0B; padding: 15px; margin: 20px 0; border-radius: 5px;">
+              <p style="margin: 0;"><strong>💡 Lưu ý:</strong></p>
+              <p style="margin: 5px 0 0 0;">Đây là email thông báo từ hệ thống CareerVibe. Để trả lời tin nhắn này, vui lòng đăng nhập vào tài khoản của bạn.</p>
+            </div>
+
+            <p>Chúc bạn thành công trong quá trình tìm kiếm việc làm!</p>
           </div>
           <div class="footer">
             <p>&copy; 2024 CareerVibe. All rights reserved.</p>

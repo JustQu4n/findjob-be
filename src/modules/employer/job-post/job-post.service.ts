@@ -11,9 +11,11 @@ import { JobPost } from 'src/database/entities/job-post/job-post.entity';
 import { Employer } from 'src/database/entities/employer/employer.entity';
 import { Skill } from 'src/database/entities/skill/skill.entity';
 import { JobPostSkill } from 'src/database/entities/job-post-skill/job-post-skill.entity';
+import { FollowedCompany } from 'src/database/entities/followed-company/followed-company.entity';
 import { CreateJobPostDto, UpdateJobPostDto, QueryJobPostDto } from './dto';
 import { PaginatedResult, PaginationMeta } from 'src/common/dto';
 import { createPaginatedResult, calculateSkip } from 'src/common/utils/helpers';
+import { NotificationsService } from 'src/modules/notifications/notifications.service';
 
 @Injectable()
 export class JobPostService {
@@ -26,6 +28,9 @@ export class JobPostService {
     private skillRepository: Repository<Skill>,
     @InjectRepository(JobPostSkill)
     private jobPostSkillRepository: Repository<JobPostSkill>,
+    @InjectRepository(FollowedCompany)
+    private followedCompanyRepository: Repository<FollowedCompany>,
+    private notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -88,6 +93,14 @@ export class JobPostService {
         createJobPostDto.skills,
       );
     }
+
+    // Gửi thông báo cho tất cả users đã follow công ty này
+    await this.notifyFollowersAboutNewJobPost(
+      employer.company_id,
+      employer.company?.name || 'Công ty',
+      savedJobPost.title,
+      savedJobPost.job_post_id,
+    );
 
     return {
       message: 'Tạo tin tuyển dụng thành công',
@@ -399,5 +412,47 @@ export class JobPostService {
     );
 
     await this.jobPostSkillRepository.save(jobPostSkills);
+  }
+
+  /**
+   * Gửi thông báo cho tất cả followers của công ty khi có bài đăng mới
+   */
+  private async notifyFollowersAboutNewJobPost(
+    companyId: string,
+    companyName: string,
+    jobTitle: string,
+    jobPostId: string,
+  ) {
+    try {
+      // Lấy tất cả job seekers đã follow công ty này
+      const followers = await this.followedCompanyRepository.find({
+        where: { company_id: companyId },
+        relations: ['jobSeeker'],
+      });
+
+      // Gửi thông báo cho từng follower
+      const notificationPromises = followers.map(async (follower) => {
+        if (follower.jobSeeker?.user_id) {
+          await this.notificationsService.sendToUser(
+            follower.jobSeeker.user_id,
+            {
+              type: 'new_job_post',
+              message: `${companyName} vừa đăng tin tuyển dụng mới: ${jobTitle}`,
+              metadata: {
+                company_id: companyId,
+                company_name: companyName,
+                job_post_id: jobPostId,
+                job_title: jobTitle,
+              },
+            },
+          );
+        }
+      });
+
+      await Promise.all(notificationPromises);
+    } catch (error) {
+      // Log lỗi nhưng không throw để không ảnh hưởng đến việc tạo job post
+      console.error('Error notifying followers about new job post:', error);
+    }
   }
 }

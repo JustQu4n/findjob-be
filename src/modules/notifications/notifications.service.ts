@@ -28,7 +28,8 @@ export class NotificationsService {
       type: payload.type,
       message: payload.message,
       metadata: payload.metadata || null,
-      is_read: false,
+      is_read: false, // Explicitly set as boolean false
+      created_at: new Date(), // Explicitly set created_at
     });
 
     const saved = await this.notificationRepository.save(notif);
@@ -86,5 +87,21 @@ export class NotificationsService {
     });
 
     return { data, total, page, limit: take };
+  }
+
+  // Count unread notifications for a user
+  async countUnread(userId: string): Promise<number> {
+    return this.notificationRepository.count({
+      where: { user_id: userId, is_read: false },
+    });
+  }
+
+  // Mark all notifications as read for a user
+  async markAllAsRead(userId: string) {
+    await this.notificationRepository.update(
+      { user_id: userId, is_read: false },
+      { is_read: true }
+    );
+    return { message: 'All notifications marked as read' };
   }
 }

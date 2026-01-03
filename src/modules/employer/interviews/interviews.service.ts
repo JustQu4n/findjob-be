@@ -206,7 +206,11 @@ export class InterviewsService {
 
   async listInterviews(userId: string) {
     const emp = await this.resolveEmployerUser(userId);
-    return this.interviewRepo.find({ where: { employer_id: emp.employer_id }, order: { created_at: 'DESC' as const } });
+    return this.interviewRepo.find({ 
+      where: { employer_id: emp.employer_id }, 
+      relations: ['jobPost'],
+      order: { created_at: 'DESC' as const } 
+    });
   }
 
   async attachInterviewToJobPost(userId: string, interviewId: string, jobPostId: string) {

@@ -6,6 +6,8 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import * as fs from 'fs';
+import * as path from 'path';
 
 import { Application } from 'src/database/entities/application/application.entity';
 import { JobSeeker } from 'src/database/entities/job-seeker/job-seeker.entity';
@@ -82,16 +84,37 @@ export class ApplicationsService {
       });
 
       // Validate file type
-      if (!this.cloudinaryService.validateFileType(file)) {
+      const allowedMimeTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      ];
+      
+      if (!allowedMimeTypes.includes(file.mimetype)) {
         throw new BadRequestException(
           'File không hợp lệ. Chỉ chấp nhận file PDF, DOC, DOCX',
         );
       }
 
-      console.log('File validation passed, uploading to Cloudinary...');
-        // Upload to Cloudinary (returns permanent public URL)
-        resumeUrl = await this.cloudinaryService.uploadFile(file, 'resumes');
-        console.log('File uploaded successfully, stored resume URL:', resumeUrl);
+      console.log('File validation passed, saving to local storage...');
+      
+      // Tạo thư mục uploads/resumes nếu chưa tồn tại
+      const uploadDir = path.join(process.cwd(), 'uploads', 'resumes');
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+
+      // Tạo tên file unique
+      const fileExtension = path.extname(file.originalname);
+      const fileName = `${Date.now()}-${jobSeeker.job_seeker_id}${fileExtension}`;
+      const filePath = path.join(uploadDir, fileName);
+
+      // Lưu file vào local storage
+      fs.writeFileSync(filePath, file.buffer);
+      
+      // Lưu đường dẫn relative vào database
+      resumeUrl = `uploads/resumes/${fileName}`;
+      console.log('File saved successfully, stored resume path:', resumeUrl);
     }
 
     // Tạo application
@@ -100,6 +123,8 @@ export class ApplicationsService {
       job_seeker_id: jobSeeker.job_seeker_id,
       cover_letter: dto.cover_letter,
       resume_url: resumeUrl,
+      status: 'pending' as any, // Explicitly set status
+      applied_at: new Date(), // Explicitly set applied_at
     });
 
     await this.applicationRepository.save(application);
@@ -182,23 +207,9 @@ export class ApplicationsService {
       order: { applied_at: 'DESC' },
     });
 
-    // Get applications with permanent Cloudinary URLs
-    const applicationsWithUrls = await Promise.all(
-      applications.map(async (app) => {
-        if (app.resume_url) {
-          // Cloudinary URLs are permanent, so just ensure they're accessible
-          const resumeUrl = await this.cloudinaryService.getFileUrl(
-            app.resume_url,
-          );
-          return { ...app, resume_download_url: resumeUrl };
-        }
-        return app;
-      }),
-    );
-
     return {
-      data: applicationsWithUrls,
-      total: applicationsWithUrls.length,
+      data: applications,
+      total: applications.length,
     };
   }
 
@@ -238,6 +249,8 @@ export class ApplicationsService {
             job_post_id: app.job_post_id,
             status: app.status,
             applied_at: app.applied_at,
+            resume_url: app.resume_url,
+            cover_letter: app.cover_letter,
             jobPost: {
               job_post_id: app.jobPost.job_post_id,
               title: app.jobPost.title,

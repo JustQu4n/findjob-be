@@ -10,6 +10,8 @@ import { Application } from 'src/database/entities/application/application.entit
 import { Employer } from 'src/database/entities/employer/employer.entity';
 import { JobPost } from 'src/database/entities/job-post/job-post.entity';
 import { UpdateApplicationStatusDto } from './dto';
+import { NotificationsService } from '@/modules/notifications/notifications.service';
+import { NotificationType } from '@/common/utils/enums/notification-type.enum';
 
 @Injectable()
 export class ApplicationManagerService {
@@ -20,6 +22,7 @@ export class ApplicationManagerService {
     private employerRepository: Repository<Employer>,
     @InjectRepository(JobPost)
     private jobPostRepository: Repository<JobPost>,
+    private notificationsService: NotificationsService,
   ) {}
 
   async getApplicationsByCompany(userId: string, companyId: string) {
@@ -90,12 +93,41 @@ export class ApplicationManagerService {
     application.status = dto.status;
     await this.applicationRepository.save(application);
 
+    // Load full application data for notification
+    const updatedApplication = await this.applicationRepository.findOne({
+      where: { application_id: applicationId },
+      relations: ['jobSeeker', 'jobSeeker.user', 'jobPost', 'jobPost.company'],
+    });
+
+    // Send notification to job seeker
+    try {
+      const jobSeekerUserId = updatedApplication?.jobSeeker?.user?.user_id;
+      if (jobSeekerUserId) {
+        const statusLabels = {
+          pending: 'Chờ duyệt',
+          reviewed: 'Đã xem xét',
+          accepted: 'Được chấp nhận',
+          rejected: 'Từ chối',
+        };
+        const statusLabel = statusLabels[dto.status] || dto.status;
+        
+        await this.notificationsService.sendToUser(jobSeekerUserId, {
+          type: NotificationType.APPLICATION_STATUS_UPDATED,
+          message: `Trạng thái hồ sơ của bạn đã được cập nhật: ${statusLabel} - ${updatedApplication.jobPost?.title || ''}`,
+          metadata: { 
+            application_id: updatedApplication.application_id, 
+            job_post_id: updatedApplication.job_post_id,
+            status: dto.status 
+          },
+        });
+      }
+    } catch (err) {
+      console.error('Failed to send notification for application status update:', err?.message || err);
+    }
+
     return {
       message: 'Cập nhật trạng thái đơn ứng tuyển thành công',
-      data: await this.applicationRepository.findOne({
-        where: { application_id: applicationId },
-        relations: ['jobSeeker', 'jobSeeker.user', 'jobPost'],
-      }),
+      data: updatedApplication,
     };
   }
 }

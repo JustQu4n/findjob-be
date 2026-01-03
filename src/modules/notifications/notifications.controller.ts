@@ -24,6 +24,16 @@ export class NotificationsController {
   }
 
   /**
+   * GET /notifications/unread-count
+   * Get count of unread notifications
+   */
+  @Get('unread-count')
+  async countUnread(@GetUser('user_id') userId: string) {
+    const count = await this.notificationsService.countUnread(userId);
+    return { unread_count: count };
+  }
+
+  /**
    * PATCH /notifications/:id/read
    * Mark a single notification as read for the current user
    */
@@ -33,5 +43,14 @@ export class NotificationsController {
     @Param('id') id: string,
   ) {
     return this.notificationsService.markAsReadByUser(id, userId);
+  }
+
+  /**
+   * PATCH /notifications/mark-all-read
+   * Mark all notifications as read for the current user
+   */
+  @Patch('mark-all-read')
+  async markAllRead(@GetUser('user_id') userId: string) {
+    return this.notificationsService.markAllAsRead(userId);
   }
 }

@@ -7,9 +7,13 @@ import { JobPost } from 'src/database/entities/job-post/job-post.entity';
 
 import { ApplicationManagerService } from './application-manager.service';
 import { ApplicationManagerController } from './application-manager.controller';
+import { NotificationsModule } from '@/modules/notifications/notifications.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Application, Employer, JobPost])],
+  imports: [
+    TypeOrmModule.forFeature([Application, Employer, JobPost]),
+    NotificationsModule,
+  ],
   controllers: [ApplicationManagerController],
   providers: [ApplicationManagerService],
   exports: [ApplicationManagerService],

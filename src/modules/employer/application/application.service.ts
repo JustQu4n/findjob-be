@@ -314,6 +314,39 @@ export class ApplicationService {
 
     await this.applicationRepository.save(applications);
 
+    // Send notifications to all affected job seekers
+    try {
+      const fullApps = await this.applicationRepository.find({
+        where: { application_id: In(dto.application_ids) },
+        relations: ['jobSeeker', 'jobSeeker.user', 'jobPost', 'jobPost.company'],
+      });
+
+      const statusLabels = {
+        pending: 'Chờ duyệt',
+        reviewed: 'Đã xem xét',
+        accepted: 'Được chấp nhận',
+        rejected: 'Từ chối',
+      };
+      const statusLabel = statusLabels[dto.status] || dto.status;
+
+      for (const app of fullApps) {
+        const jobSeekerUserId = app?.jobSeeker?.user?.user_id;
+        if (jobSeekerUserId) {
+          await this.notificationsService.sendToUser(jobSeekerUserId, {
+            type: 'application_status_updated',
+            message: `Trạng thái hồ sơ của bạn đã được cập nhật: ${statusLabel} - ${app.jobPost?.title || ''}`,
+            metadata: { 
+              application_id: app.application_id,
+              job_post_id: app.job_post_id,
+              status: dto.status 
+            },
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Failed to send batch notifications:', err?.message || err);
+    }
+
     return {
       message: `Cập nhật trạng thái thành công cho ${applications.length} đơn ứng tuyển`,
       data: {

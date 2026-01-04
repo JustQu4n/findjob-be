@@ -136,6 +136,11 @@ export class UsersInterviewService {
     if (!ci) throw new NotFoundException('Candidate interview not found');
     if (ci.candidate_id !== userId) throw new ForbiddenException('Not allowed');
 
+    // Check if already submitted
+    if (ci.status === 'submitted') {
+      throw new ForbiddenException('Bài interview này đã được nộp. Không thể xem lại.');
+    }
+
     // Check timeout
     if (ci.deadline_at && new Date() > ci.deadline_at && ci.status !== 'submitted' && ci.status !== 'timeout') {
       ci.status = 'timeout';
@@ -154,6 +159,17 @@ export class UsersInterviewService {
     const ci = await this.candidateInterviewRepo.findOne({ where: { candidate_interview_id: id } });
     if (!ci) throw new NotFoundException('Candidate interview not found');
     if (ci.candidate_id !== userId) throw new ForbiddenException('Not allowed');
+    
+    // Check if already submitted - không cho làm lại
+    if (ci.status === 'submitted') {
+      throw new ForbiddenException('Bài interview này đã được nộp. Không thể làm lại.');
+    }
+    
+    // Check if timeout
+    if (ci.status === 'timeout') {
+      throw new ForbiddenException('Bài interview này đã quá hạn.');
+    }
+    
     ci.started_at = new Date();
     ci.status = 'in_progress';
     await this.candidateInterviewRepo.save(ci);
@@ -164,6 +180,16 @@ export class UsersInterviewService {
     const ci = await this.candidateInterviewRepo.findOne({ where: { candidate_interview_id: id } });
     if (!ci) throw new NotFoundException('Candidate interview not found');
     if (ci.candidate_id !== userId) throw new ForbiddenException('Not allowed');
+    
+    // Check if already submitted - không cho nộp lại
+    if (ci.status === 'submitted') {
+      throw new ForbiddenException('Bài interview này đã được nộp. Không thể nộp lại.');
+    }
+    
+    // Check if timeout
+    if (ci.status === 'timeout') {
+      throw new ForbiddenException('Bài interview này đã quá hạn.');
+    }
 
     // Upsert answers
     for (const it of dto.answers) {

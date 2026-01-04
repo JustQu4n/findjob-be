@@ -498,6 +498,82 @@ export class AuthService {
     };
   }
 
+  async loginAdmin(loginDto: LoginDto) {
+    const { email, password } = loginDto;
+
+    // Find user with admin role
+    const user = await this.userRepository.findOne({
+      where: { email },
+      relations: ['roles', 'admin'],
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
+    }
+
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
+    }
+
+    // Check if user has admin role
+    const hasAdminRole = user.roles.some(role => role.role_name === RoleName.ADMIN);
+    if (!hasAdminRole) {
+      throw new UnauthorizedException('Bạn không có quyền truy cập trang quản trị');
+    }
+
+    // Check email verification
+    if (!user.is_email_verified) {
+      throw new UnauthorizedException('Vui lòng xác thực email trước khi đăng nhập');
+    }
+
+    // Check account status
+    if (user.status !== UserStatus.ACTIVE) {
+      throw new UnauthorizedException('Tài khoản đã bị khóa');
+    }
+
+    // Generate tokens
+    const tokens = await this.generateTokens(user);
+
+    // Save refresh token (hashed)
+    const hashedRefresh = await bcrypt.hash(tokens.refreshToken, 10);
+    user.refresh_token = hashedRefresh;
+    await this.userRepository.save(user);
+
+    // Get avatar URL if exists
+    let avatar_url: string | null = null;
+    if (user.avatar_url) {
+      try {
+        avatar_url = await this.minioService.getFileUrl(user.avatar_url);
+      } catch (error) {
+        // Avatar URL retrieval failed, continue without it
+        avatar_url = null;
+      }
+    }
+
+    // Return admin-specific data
+    return {
+      success: true,
+      message: 'Đăng nhập quản trị thành công',
+      user: {
+        user_id: user.user_id,
+        email: user.email,
+        full_name: user.full_name,
+        phone: user.phone,
+        avatar_url,
+        roles: user.roles.map(role => role.role_name),
+        admin: user.admin ? {
+          admin_id: user.admin.admin_id,
+          department: user.admin.department,
+          position: user.admin.position,
+          permissions: user.admin.permissions,
+        } : null,
+      },
+      ...tokens,
+    };
+  }
+
   async validateUser(email: string, password: string): Promise<any> {
     const user = await this.userRepository.findOne({
       where: { email },

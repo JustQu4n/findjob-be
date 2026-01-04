@@ -87,6 +87,13 @@ export class AuthController {
     return this.authService.login(loginDto);
   }
 
+  @Public()
+  @Post('admin/login')
+  @HttpCode(HttpStatus.OK)
+  async adminLogin(@Body() loginDto: LoginDto) {
+    return this.authService.loginAdmin(loginDto);
+  }
+
   @Post('refresh')
   @UseGuards(JwtRefreshAuthGuard)
   @HttpCode(HttpStatus.OK)

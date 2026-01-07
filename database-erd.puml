@@ -1,0 +1,288 @@
+@startuml Database ERD - Core Tables
+
+!define Table(name,desc) class name as "desc" << (T,#FFAAAA) >>
+!define primary_key(x) <b>PK: x</b>
+!define foreign_key(x) <color:green>FK: x</color>
+!define unique(x) <color:blue>UQ: x</color>
+
+' Styling
+skinparam class {
+  BackgroundColor WhiteSmoke
+  BorderColor Black
+  ArrowColor Black
+}
+
+' ============= CORE USER TABLES =============
+
+entity "users" as users {
+  primary_key(user_id: uuid)
+  --
+  full_name: varchar(100)
+  unique(email: varchar(100))
+  password_hash: varchar(255)
+  phone: varchar(20)
+  address: varchar(255)
+  avatar_url: varchar(500)
+  status: enum
+  is_email_verified: boolean
+  created_at: timestamp
+  updated_at: timestamp
+  deleted_at: timestamp
+}
+
+entity "job_seekers" as job_seekers {
+  primary_key(job_seeker_id: uuid)
+  --
+  foreign_key(user_id: uuid)
+  resume_url: varchar(255)
+  avatar_url: varchar(500)
+  bio: text
+  experience: int
+  preferred_locations: jsonb
+  preferred_job_level: varchar(50)
+  preferred_job_type: varchar(50)
+  expected_salary: int
+}
+
+entity "employers" as employers {
+  primary_key(employer_id: uuid)
+  --
+  foreign_key(user_id: uuid)
+  foreign_key(company_id: uuid)
+  position: varchar(100)
+  avatar_url: varchar(500)
+}
+
+' ============= COMPANY =============
+
+entity "companies" as companies {
+  primary_key(company_id: uuid)
+  --
+  name: varchar(150)
+  industry: varchar(100)
+  description: text
+  overview: text
+  benefits: text
+  location: varchar(255)
+  website: varchar(255)
+  employees_range: varchar(50)
+  logo_url: varchar(500)
+  contact_email: varchar(255)
+  contact_phone: varchar(50)
+  created_at: timestamp
+  updated_at: timestamp
+}
+
+' ============= CATEGORY =============
+
+entity "categories" as categories {
+  primary_key(category_id: uuid)
+  --
+  unique(name: varchar(100))
+  description: text
+  unique(slug: varchar(50))
+  created_at: timestamp
+}
+
+' ============= JOB POSTS =============
+
+entity "job_posts" as job_posts {
+  primary_key(job_post_id: uuid)
+  --
+  foreign_key(employer_id: uuid)
+  foreign_key(company_id: uuid)
+  foreign_key(category_id: uuid)
+  title: varchar(150)
+  description: text
+  requirements: text
+  location: varchar(255)
+  experience: varchar(50)
+  level: enum
+  salary_range: varchar(50)
+  job_type: enum
+  status: enum
+  created_at: timestamp
+  updated_at: timestamp
+  deadline: date
+}
+
+' ============= SKILLS =============
+
+entity "skills" as skills {
+  primary_key(id: int)
+  --
+  unique(name: text)
+}
+
+entity "user_skills" as user_skills {
+  primary_key(id: uuid)
+  --
+  foreign_key(job_seeker_id: uuid)
+  foreign_key(skill_id: int)
+  proficiency_level: varchar(50)
+}
+
+entity "job_post_skills" as job_post_skills {
+  primary_key(id: uuid)
+  --
+  foreign_key(job_post_id: uuid)
+  foreign_key(skill_id: int)
+  required_level: varchar(50)
+  is_required: boolean
+}
+
+' ============= APPLICATIONS =============
+
+entity "applications" as applications {
+  primary_key(application_id: uuid)
+  --
+  foreign_key(job_post_id: uuid)
+  foreign_key(job_seeker_id: uuid)
+  status: enum
+  resume_url: varchar(500)
+  cover_letter: text
+  applied_at: timestamp
+  updated_at: timestamp
+}
+
+entity "saved_jobs" as saved_jobs {
+  primary_key(saved_job_id: uuid)
+  --
+  foreign_key(job_seeker_id: uuid)
+  foreign_key(job_post_id: uuid)
+  saved_at: timestamp
+}
+
+' ============= JOB SEEKER PROFILE =============
+
+entity "experiences" as experiences {
+  primary_key(id: uuid)
+  --
+  foreign_key(job_seeker_id: uuid)
+  company_name: text
+  title: text
+  location: text
+  start_date: date
+  end_date: date
+  is_current: boolean
+  description: text
+}
+
+entity "educations" as educations {
+  primary_key(id: uuid)
+  --
+  foreign_key(job_seeker_id: uuid)
+  school: text
+  degree: text
+  field: text
+  start_date: date
+  end_date: date
+  is_current: boolean
+  description: text
+}
+
+' ============= INTERVIEW SYSTEM =============
+
+entity "interviews" as interviews {
+  primary_key(interview_id: uuid)
+  --
+  foreign_key(job_post_id: uuid)
+  foreign_key(employer_id: uuid)
+  title: text
+  description: text
+  status: varchar(32)
+  total_time_minutes: int
+  created_at: timestamp
+  updated_at: timestamp
+}
+
+entity "interview_questions" as interview_questions {
+  primary_key(question_id: uuid)
+  --
+  foreign_key(interview_id: uuid)
+  question_text: text
+  question_type: varchar(50)
+  time_limit_seconds: int
+  order_index: int
+  created_at: timestamp
+}
+
+entity "interview_answers" as interview_answers {
+  primary_key(answer_id: uuid)
+  --
+  foreign_key(question_id: uuid)
+  foreign_key(candidate_interview_id: uuid)
+  answer_text: text
+  video_url: varchar(500)
+  time_taken_seconds: int
+  created_at: timestamp
+}
+
+entity "candidate_interviews" as candidate_interviews {
+  primary_key(candidate_interview_id: uuid)
+  --
+  foreign_key(interview_id: uuid)
+  foreign_key(job_seeker_id: uuid)
+  foreign_key(application_id: uuid)
+  status: varchar(32)
+  started_at: timestamp
+  submitted_at: timestamp
+  expires_at: timestamp
+  created_at: timestamp
+  updated_at: timestamp
+}
+
+entity "interview_ai_evaluations" as interview_ai_evaluations {
+  primary_key(evaluation_id: uuid)
+  --
+  foreign_key(candidate_interview_id: uuid)
+  overall_score: decimal(5,2)
+  strengths: text
+  weaknesses: text
+  recommendations: text
+  evaluated_at: timestamp
+  created_at: timestamp
+}
+
+' ============= RELATIONSHIPS =============
+
+' User Relationships
+users ||--o| job_seekers : "1:1"
+users ||--o| employers : "1:1"
+
+' Company Relationships
+companies ||--o{ employers : "1:N"
+companies ||--o{ job_posts : "1:N"
+
+' Job Seeker Relationships
+job_seekers ||--o{ applications : "1:N"
+job_seekers ||--o{ saved_jobs : "1:N"
+job_seekers ||--o{ user_skills : "1:N"
+job_seekers ||--o{ experiences : "1:N"
+job_seekers ||--o{ educations : "1:N"
+job_seekers ||--o{ candidate_interviews : "1:N"
+
+' Employer Relationships
+employers ||--o{ job_posts : "1:N"
+employers ||--o{ interviews : "1:N"
+
+' Job Post Relationships
+job_posts ||--o{ applications : "1:N"
+job_posts ||--o{ saved_jobs : "1:N"
+job_posts ||--o{ job_post_skills : "1:N"
+job_posts ||--o{ interviews : "1:N"
+categories ||--o{ job_posts : "1:N"
+
+' Skill Relationships
+skills ||--o{ user_skills : "1:N"
+skills ||--o{ job_post_skills : "1:N"
+
+' Interview Relationships
+interviews ||--o{ interview_questions : "1:N"
+interviews ||--o{ candidate_interviews : "1:N"
+interview_questions ||--o{ interview_answers : "1:N"
+candidate_interviews ||--o{ interview_answers : "1:N"
+candidate_interviews ||--o| interview_ai_evaluations : "1:1"
+applications ||--o{ candidate_interviews : "1:N"
+
+@enduml

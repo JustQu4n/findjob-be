@@ -13,6 +13,7 @@ import { Application } from 'src/database/entities/application/application.entit
 import { JobSeeker } from 'src/database/entities/job-seeker/job-seeker.entity';
 import { JobPost } from 'src/database/entities/job-post/job-post.entity';
 import { Interview } from 'src/database/entities/interview/interview.entity';
+import { InterviewQuestion } from 'src/database/entities/interview-question/interview-question.entity';
 import { CloudinaryService } from 'src/modules/cloudinary/cloudinary.service';
 import { NotificationsService } from 'src/modules/notifications/notifications.service';
 import { NotificationType } from '@/common/utils/enums/notification-type.enum';
@@ -29,6 +30,8 @@ export class ApplicationsService {
     private jobPostRepository: Repository<JobPost>,
     @InjectRepository(Interview)
     private interviewRepository: Repository<Interview>,
+    @InjectRepository(InterviewQuestion)
+    private questionRepository: Repository<InterviewQuestion>,
     private cloudinaryService: CloudinaryService,
     private notificationsService: NotificationsService,
   ) {}
@@ -160,6 +163,12 @@ export class ApplicationsService {
         .getOne();
     }
 
+    // If there's an active interview, get its question count
+    let activeInterviewQuestionCount: number | null = null;
+    if (activeInterview) {
+      activeInterviewQuestionCount = await this.questionRepository.count({ where: { interview_id: activeInterview.interview_id } });
+    }
+
     return {
       message: 'Nộp đơn ứng tuyển thành công',
       data: await this.applicationRepository.findOne({
@@ -171,6 +180,7 @@ export class ApplicationsService {
         title: activeInterview.title,
         description: activeInterview.description,
         total_time_minutes: activeInterview.total_time_minutes,
+        question_count: activeInterviewQuestionCount,
         has_interview: true,
       } : null,
     };
@@ -244,6 +254,9 @@ export class ApplicationsService {
             .andWhere('ci.candidate_id = :candidateId', { candidateId: userId })
             .getOne();
 
+          // Count questions for this interview
+          const questionCount = await this.questionRepository.count({ where: { interview_id: interview.interview_id } });
+
           return {
             application_id: app.application_id,
             job_post_id: app.job_post_id,
@@ -261,6 +274,7 @@ export class ApplicationsService {
               title: interview.title,
               description: interview.description,
               total_time_minutes: interview.total_time_minutes,
+              question_count: questionCount,
               deadline: interview.deadline,
               status: interview.status,
             },

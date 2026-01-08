@@ -12,6 +12,7 @@ import { SubmitAnswersDto } from './dto/submit-answers.dto';
 import { NotificationsService } from 'src/modules/notifications/notifications.service';
 import { EmailService } from 'src/modules/email/email.service';
 import { NotificationType } from '@/common/utils/enums/notification-type.enum';
+import { InterviewScoringService } from 'src/modules/interview-scoring/services/interview-scoring.service';
 
 @Injectable()
 export class UsersInterviewService {
@@ -32,6 +33,7 @@ export class UsersInterviewService {
     private readonly userRepo: Repository<User>,
     private readonly notificationsService: NotificationsService,
     private readonly emailService: EmailService,
+    private readonly interviewScoringService: InterviewScoringService,
   ) {}
 
   async listForUser(userId: string) {
@@ -132,7 +134,7 @@ export class UsersInterviewService {
   }
 
   async getAssignment(id: string, userId: string) {
-    const ci = await this.candidateInterviewRepo.findOne({ where: { candidate_interview_id: id } });
+    const ci = await this.candidateInterviewRepo.findOne({ where: { candidate_interview_id: id }, relations: ['interview'] });
     if (!ci) throw new NotFoundException('Candidate interview not found');
     if (ci.candidate_id !== userId) throw new ForbiddenException('Not allowed');
 
@@ -152,7 +154,14 @@ export class UsersInterviewService {
       order: { order_index: 'ASC' as const, created_at: 'ASC' as const } 
     });
     
-    return { candidateInterview: ci, questions };
+    return {
+      candidateInterview: ci,
+      interview: {
+        interview_id: ci.interview_id,
+        title: (ci as any).interview?.title || null,
+      },
+      questions,
+    };
   }
 
   async startAssignment(id: string, userId: string) {
@@ -249,6 +258,15 @@ export class UsersInterviewService {
       }
     } catch (err) {
       console.error('Failed to notify employer about submitted interview', err);
+    }
+
+    // Trigger AI scoring asynchronously (do not block submission)
+    try {
+      this.interviewScoringService.scoreInterview(ci.candidate_interview_id).catch((err) => {
+        console.error('AI scoring failed for candidate_interview_id:', ci.candidate_interview_id, err);
+      });
+    } catch (err) {
+      console.error('Failed to start AI scoring job for candidate_interview_id:', ci.candidate_interview_id, err);
     }
 
     return { ok: true };

@@ -11,12 +11,14 @@ import { Employer } from 'src/database/entities/employer/employer.entity';
 import { User } from 'src/database/entities/user/user.entity';
 import { NotificationsModule } from 'src/modules/notifications/notifications.module';
 import { EmailModule } from 'src/modules/email/email.module';
+import { InterviewScoringModule } from 'src/modules/interview-scoring/interview-scoring.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([CandidateInterview, InterviewQuestion, InterviewAnswer, Application, Interview, Employer, User]),
     NotificationsModule,
     EmailModule,
+    InterviewScoringModule,
   ],
   controllers: [UsersInterviewController],
   providers: [UsersInterviewService],

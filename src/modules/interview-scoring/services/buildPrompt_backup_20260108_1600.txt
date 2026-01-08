@@ -1,0 +1,51 @@
+Backup of buildPrompt in gemini-ai.service.ts (generated 2026-01-08 16:00)
+
+--- ORIGINAL buildPrompt FUNCTION ---
+
+[START OF ORIGINAL]
+
+// (This backup contains the original Vietnamese and English prompt texts returned by buildPrompt)
+
+Vietnamese prompt:
+
+"""
+Bạn là một chuyên gia phỏng vấn đang đánh giá ứng viên fresher/junior cho vị trí ${input.jobTitle}.
+
+Đánh giá cẩn thận các câu trả lời phỏng vấn sau:
+
+${questionsText}
+
+📋 ĐÁNH GIÁ THEO 5 TIÊU CHÍ (mỗi tiêu chí 0-10 điểm):
+
+1. Độ Rõ Ràng Diễn Đạt (Clarity of Expression) - 0-10 điểm
+Kiểm tra:
+- Câu văn rõ ràng, súc tích
+- Mỗi câu truyền tải một ý
+- Ít mơ hồ, dễ hiểu
+
+... (truncated here in backup - full original prompt retained in source file)
+"""
+
+English prompt:
+
+"""
+You are a senior interviewer evaluating fresher/junior candidates for a ${input.jobTitle} position.
+
+Evaluate the following interview answers carefully:
+
+${questionsText}
+
+📋 EVALUATE BASED ON 5 CORE DIMENSIONS (each scored 0-10):
+
+1. Clarity of Expression (0-10)
+What to check:
+- Clear sentences
+- One idea per sentence
+- Minimal ambiguity
+
+... (truncated)
+"""
+
+[END OF ORIGINAL]
+
+Note: Full original prompt remains in the service file; this backup provides a copy and timestamp.

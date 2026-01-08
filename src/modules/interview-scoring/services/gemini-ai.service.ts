@@ -5,6 +5,7 @@ import OpenAI from 'openai';
 export interface InterviewQuestion {
   question: string;
   answer: string;
+  criteria?: string[] | null;
 }
 
 export interface InterviewInput {
@@ -25,6 +26,16 @@ export interface AiScoringResult {
   summary: string;
   redFlags?: string[];
   detailedFeedback?: any;
+  group2Analysis?: {
+    learningAttitude?: {
+      score: number;
+      evidence: string[];
+    };
+    professionalAttitude?: {
+      score: number;
+      evidence: string[];
+    };
+  };
 }
 
 @Injectable()
@@ -74,6 +85,8 @@ export class GeminiAiService {
 
       // Parse JSON response
       const parsedResult = JSON.parse(text);
+      console.log('🔍 Parsed AI Response:', JSON.stringify(parsedResult, null, 2));
+      console.log('🔍 group2Analysis from AI:', parsedResult.group2Analysis);
 
       // Validate and normalize the result
       return this.normalizeResult(parsedResult);
@@ -85,238 +98,352 @@ export class GeminiAiService {
 
   private buildPrompt(input: InterviewInput): string {
     const questionsText = input.questions
-      .map((q, index) => `Question ${index + 1}: ${q.question}\nAnswer: ${q.answer}`)
+      .map((q, index) => {
+        const criteriaText = q.criteria && q.criteria.length > 0 
+          ? `\nCriteria: ${q.criteria.join(', ')}`
+          : '';
+        return `Câu ${index + 1}: ${q.question}${criteriaText}\nTrả lời: ${q.answer}`;
+      })
       .join('\n\n');
-
+      console.log('questionsText:', questionsText);
     // Detect if input is in Vietnamese
     const isVietnamese = this.detectVietnamese(input);
-
+    
     if (isVietnamese) {
-      return `Bạn là một chuyên gia phỏng vấn đang đánh giá ứng viên fresher/junior cho vị trí ${input.jobTitle}.
+      return `Bạn là chuyên gia phỏng vấn đánh giá ứng viên fresher/junior/senior cho vị trí ${input.jobTitle}.
+ PHƯƠNG PHÁP CHẤM ĐIỂM THEO 2 NHÓM TIÊU CHÍ:
 
-Đánh giá cẩn thận các câu trả lời phỏng vấn sau:
+**NHÓM 1 - Tiêu chí Kỹ thuật/Kiến thức (chấm TỪNG CÂU):**
+- Basic IT Awareness (Nhận thức IT cơ bản)
+- Logical Thinking (Tư duy logic)
+- Clarity of Expression (Diễn đạt rõ ràng)
+
+**NHÓM 2 - Tiêu chí Hành vi/Thái độ (chấm TOÀN BỘ BÀI):**
+- Learning Attitude & Growth Mindset (Thái độ học hỏi)
+- Professional Attitude & Honesty (Thái độ chuyên nghiệp)
+
+---
+
+CÁC CÂU HỎI VÀ TRẢ LỜI:
 
 ${questionsText}
 
-📋 ĐÁNH GIÁ THEO 5 TIÊU CHÍ (mỗi tiêu chí 0-10 điểm):
+---
 
-1. Độ Rõ Ràng Diễn Đạt (Clarity of Expression) - 0-10 điểm
-Kiểm tra:
-- Câu văn rõ ràng, súc tích
-- Mỗi câu truyền tải một ý
-- Ít mơ hồ, dễ hiểu
+HƯỚNG DẪN CHI TIẾT:
 
-Dấu hiệu tốt: Câu trả lời có cấu trúc, đoạn ngắn gọn
-Dấu hiệu xấu: Câu quá dài, đại từ không rõ, lan man
+**CHO NHÓM 1 (chấm từng câu dựa trên Criteria của câu hỏi):**
 
-Thang điểm:
-- 0-2: Khó hiểu
-- 3-5: Hiểu được nhưng rối
-- 6-7: Khá rõ ràng
-- 8-10: Rõ ràng, súc tích, logic
+Với mỗi câu hỏi:
+- Xem "Criteria" của câu hỏi đó
+- CHỈ chấm điểm các tiêu chí NHÓM 1 có trong Criteria
+- Nếu tiêu chí KHÔNG có trong Criteria → đặt null
+- Mỗi tiêu chí: 0-10 điểm
 
-2. Tư Duy Logic (Logical Thinking) - 0-10 điểm
-Kiểm tra:
-- Nguyên nhân → kết quả rõ ràng
-- Lập luận từng bước
-- Câu trả lời khớp với câu hỏi
+Ví dụ:
+- Câu 1 có Criteria: "Basic IT Awareness, Clarity of Expression, Logical Thinking"
+  → Chấm 3 tiêu chí này
+- Câu 1 có Criteria: "Basic IT Awareness, Clarity of Expression"
+  → Chấm 2 tiêu chí này, Logical Thinking = null
 
-Dấu hiệu tốt: "Đầu tiên..., sau đó..., do đó..."
-Dấu hiệu xấu: Nhảy ý, kể chuyện không liên quan
+# SCORING RUBRIC (Tiêu chí chấm điểm)
 
-Ví dụ tốt: "Em thất bại khi học X vì..., nên em đã thay đổi cách tiếp cận bằng..."
+## 1. BASIC IT AWARENESS (Nhận thức IT cơ bản)
+*Mục tiêu: Đánh giá độ hiểu bản chất, không đánh giá thuật ngữ sáo rỗng.*
+- **0 điểm:** Sai hoàn toàn, nhầm lẫn khái niệm cơ bản (VD: Frontend ≈ Backend), hoặc không trả lời.
+- **1-2 điểm:** Nhắc lại định nghĩa mơ hồ, học vẹt, không giải thích được bằng lời riêng.
+- **3-4 điểm:** Hiểu bề mặt, đúng tên gọi nhưng thiếu ngữ cảnh/ví dụ. Giải thích rời rạc.
+- **5-6 điểm:** Hiểu đúng bản chất. Dùng ngôn ngữ đời thường dễ hiểu. Thuật ngữ sử dụng chính xác.
+- **7-8 điểm:** Hiểu sâu. Có ví dụ thực tế hoặc kinh nghiệm đã làm. Nêu được ưu/nhược điểm cơ bản.
+- **9 điểm:** Rất chắc chắn. Liên hệ hệ thống thực tế tốt. Không thừa, không thiếu.
+- **10 điểm:** Master. Giải thích cho người khác hiểu được. Thể hiện rõ tư duy của người đã làm thực tế (bối cảnh, hệ quả).
 
-3. Thái Độ Học Hỏi & Phát Triển (Learning Attitude & Growth Mindset) - 0-10 điểm
-⭐ QUAN TRỌNG NHẤT với fresher
+## 2. LOGICAL THINKING (Tư duy Logic)
+*Mục tiêu: Đánh giá luồng suy nghĩ (Problem Solving), không đánh giá trí nhớ.*
+⚠️ **QUY TẮC ĐẶC BIỆT:** Nếu câu hỏi thuộc dạng "Định nghĩa/Lý thuyết thuần túy" (Knowledge-based) -> Trả về điểm 'N/A'.
+- **0 điểm:** Mâu thuẫn logic, trả lời lạc đề, nhảy ý loạn xạ.
+- **1-2 điểm:** Lập luận yếu, không có cấu trúc (Mở bài/Thân bài/Kết luận), thiếu quan hệ nhân-quả.
+- **3-4 điểm:** Có logic cơ bản nhưng trình tự lộn xộn, thiếu bước trung gian.
+- **5-6 điểm:** Trình tự rõ ràng (Bước 1 -> Bước 2 -> Kết luận). Đi đúng trọng tâm.
+- **7-8 điểm:** Chặt chẽ. Biết phân tích đánh đổi (trade-off). Giải thích được "Tại sao" (Why) thay vì chỉ "Làm gì" (What).
+- **9 điểm:** Tư duy sâu, dự đoán được các trường hợp ngoại lệ (edge cases).
+- **10 điểm:** Tư duy hệ thống (System Thinking). Có khả năng trừu tượng hóa và đề xuất cải tiến mở rộng.
 
-Kiểm tra:
-- Có ví dụ tự học không?
-- Cách xử lý khó khăn
-- Sẵn sàng cải thiện
+## 3. CLARITY OF EXPRESSION (Diễn đạt)
+*Mục tiêu: Đánh giá khả năng truyền đạt thông tin.*
+- **0 điểm:** Lủng củng, sai ngữ pháp nặng, người nghe không hiểu gì.
+- **1-2 điểm:** Dùng nhiều từ đệm (à, ừ, cái đó...), không cấu trúc, diễn đạt kém.
+- **3-4 điểm:** Hiểu được nhưng dài dòng, lặp ý, lan man.
+- **5-6 điểm:** Rõ ràng, tách bạch ý chính, cấu trúc câu ổn.
+- **7-8 điểm:** Mạch lạc. Biết nhấn mạnh trọng tâm. Dùng thuật ngữ đúng lúc, đúng chỗ.
+- **9 điểm:** Rất dễ hiểu ngay cả với người không chuyên (Non-tech).
+- **10 điểm:** Xuất sắc. Ngắn gọn, súc tích (Concise). Phong cách chuyên nghiệp như đang training team.
 
-Dấu hiệu tốt: Đề cập khóa học online, thực hành, sửa lỗi
-Dấu hiệu xấu: Đổ lỗi người khác, nói "Em không giỏi học"
+# CONSTRAINT (Quy tắc bắt buộc)
+1. **Critical Thinking:** Không chấm điểm cao chỉ vì câu trả lời dài hoặc dùng nhiều thuật ngữ tiếng Anh ("buzzwords") nếu bản chất sai.
+2. **Score Selection:** Nếu phân vân giữa 2 mức điểm (ví dụ 6 và 7), BẮT BUỘC chọn mức THẤP HƠN (6).
+3. **Reasoning:** Phải cung cấp lý do ngắn gọn (Evidence) trích xuất từ câu trả lời để bảo vệ số điểm đã cho.
 
-4. Nhận Thức IT Cơ Bản (Basic IT Awareness) - 0-10 điểm
-Không cần sâu - chỉ cần có nhận thức
+**CHO NHÓM 2 (chấm toàn bộ bài phỏng vấn):**
 
-Kiểm tra:
-- Biết các khái niệm cơ bản
-- Có thể giải thích đơn giản
-- Dùng thuật ngữ đúng (dù chưa sâu)
+Đọc TẤT CẢ câu trả lời và đánh giá tổng thể 2 tiêu chí sau:
 
-Dấu hiệu tốt: Giải thích HTML, API, Git bằng ngôn ngữ của mình
-Dấu hiệu xấu: Copy-paste định nghĩa không hiểu
+DEFINED ENUMS (Bảng định danh bắt buộc)
 
-5. Thái Độ Chuyên Nghiệp & Trung Thực (Professional Attitude & Honesty) - 0-10 điểm
-Kiểm tra:
-- Tự đánh giá thực tế
-- Thừa nhận điểm yếu
-- Giọng điệu tôn trọng
+Khi gán nhãn (Labeling), bạn CHỈ ĐƯỢC PHÉP sử dụng các giá trị trong danh sách dưới đây. Tuyệt đối không tự sáng tạo từ mới.
 
-🚩 Cờ đỏ:
-- Thổi phồng kỹ năng
-- "Em biết tất cả", "Không có điểm yếu"
-- Câu trả lời giống ChatGPT, chung chung, không chi tiết cá nhân
+1. VALID TAGS:
 
-⚠️ CÁC CỜ ĐỎ CẦN KIỂM TRA (độc lập với điểm số):
+"Honesty": Sự trung thực, dám nhận sai, chính trực.
+"Communication": Kỹ năng diễn đạt, lắng nghe, chốt vấn đề.
+"Problem_Solving": Cách tiếp cận và xử lý vấn đề, tư duy giải pháp.
+"Technical_Depth": Độ sâu kiến thức chuyên môn, hiểu bản chất.
+"Defensive": Thái độ phòng thủ, bảo thủ, đổ lỗi, bao biện.
+"Curiosity": Sự tò mò, ham học hỏi, cầu tiến.
 
-| Cờ Đỏ | Lý Do |
-|--------|-------|
-| Câu trả lời không khớp câu hỏi | Kỹ năng lắng nghe kém |
-| Copy-paste nội dung chung chung | Thiếu chính trực |
-| Đổ lỗi thầy cô/công ty | Tư duy tiêu cực |
-| Câu trả lời cực kỳ ngắn/lười biếng | Thiếu nỗ lực |
-| Quá tự tin không có bằng chứng | Thái độ rủi ro |
+2. VALID SENTIMENTS:
 
-👉 1 cờ đỏ lớn = cần phỏng vấn trực tiếp
+"Positive": Tín hiệu tốt, mang tính xây dựng.
+"Negative": Tín hiệu xấu, cảnh báo rủi ro (red flag).
+"Neutral": Trung tính, mô tả sự thật khách quan.
 
-Trả về kết quả theo định dạng JSON sau (CHỈ trả về JSON hợp lệ, không có văn bản bổ sung):
+INSTRUCTION: CHAIN OF THOUGHT PROCESS
+
+Thực hiện quy trình suy luận 4 bước sau:
+
+STEP 1: Evidence Extraction (Trích xuất & Gán nhãn)
+Quét hội thoại, tìm các câu nói thể hiện rõ tính cách/tư duy.
+Trích dẫn nguyên văn ("quote").
+Map câu nói đó vào duy nhất 01 Tag phù hợp nhất trong danh sách "VALID TAGS".
+Xác định Sentiment trong danh sách "VALID SENTIMENTS".
+STEP 2: Conflict & Context Analysis
+
+Phân tích sự thay đổi thái độ (VD: Ban đầu "Defensive" nhưng sau đó chuyển sang "Honesty" hoặc "Curiosity").
+Xác định xem các tín hiệu "Negative" là bản chất cố hữu hay do áp lực tâm lý nhất thời.
+
+STEP 3: Reasoning (Lập luận)
+
+Tổng hợp dữ liệu từ Step 1 & 2 để lập luận cho 2 nhóm điểm số:
+Learning Attitude & Growth Mindset: Dựa nhiều vào tag "Curiosity", "Technical_Depth", và cách xử lý khi gặp cái mới.
+Professional Attitude & Honesty: Dựa nhiều vào tag "Honesty", "Defensive", "Communication".
+STEP 4: Scoring (Chấm điểm 0-10)
+
+< 5: Nhiều tag "Defensive", "Negative".
+5 - 6.5: Trung bình, còn thụ động.
+7 - 8.5: Tốt, nhiều tag "Positive", "Curiosity".
+9 - 10: Xuất sắc, tư duy "Problem_Solving" và "Honesty" cao.
+
+---
+
+📊 **OUTPUT JSON (CHỈ trả về JSON hợp lệ):**
 
 {
-  "totalScore": <tổng điểm của 5 tiêu chí (0-50)>,
-  "finalRecommendation": "<PASS | FAIL>",
+  "finalRecommendation": "PASS|FAIL",
   "criteria": {
-    "clarity": <0-10>,
-    "logic": <0-10>,
-    "learningAttitude": <0-10>,
-    "itAwareness": <0-10>,
-    "professionalAttitude": <0-10>
+    "clarity": <trung bình từ các câu có tiêu chí này, hoặc 0>,
+    "logic": <trung bình từ các câu có tiêu chí này, hoặc 0>,
+    "learningAttitude": <điểm toàn bộ bài 0-10>,
+    "itAwareness": <trung bình từ các câu có tiêu chí này, hoặc 0>,
+    "professionalAttitude": <điểm toàn bộ bài 0-10>
   },
-  "redFlags": ["<cờ đỏ 1 nếu có>", "<cờ đỏ 2 nếu có>"],
-  "summary": "<Đánh giá tổng quan 2-3 câu bằng tiếng Việt>",
+  "redFlags": ["<cờ đỏ nếu có>"],
+  "summary": "<Đánh giá tổng quan 5-10 câu bằng tiếng Việt>",
   "detailedFeedback": [
     {
       "questionIndex": 0,
-      "strengths": ["<điểm mạnh 1 bằng tiếng Việt>", "<điểm mạnh 2>"],
-      "weaknesses": ["<điểm yếu 1 bằng tiếng Việt>"],
-      "score": <điểm câu hỏi>
+      "questionCriteria": ["<criteria của câu hỏi>"],
+      "scores": {
+        "clarity": <0-10 hoặc null nếu không có trong criteria>,
+        "logic": <0-10 hoặc null nếu không có trong criteria>,
+        "itAwareness": <0-10 hoặc null nếu không có trong criteria>
+      },
+      "strengths": ["<điểm mạnh>"],
+      "weaknesses": ["<điểm yếu>"]
     }
-  ]
+  ],
+  "group2Analysis": {
+    "learningAttitude": {
+      "score": <0-10>,
+      "evidence": ["<bằng chứng từ các câu trả lời>"]
+    },
+    "professionalAttitude": {
+      "score": <0-10>,
+      "evidence": ["<bằng chứng từ các câu trả lời>"]
+    }
+  }
 }
 
-📊 HƯỚNG DẪN CHẤM ĐIỂM (Tổng: 50 điểm):
-- 40-50 điểm: ✅ PASS (Ứng viên xuất sắc - rất đáp ứng yêu cầu)
-- 25-39 điểm: ✅ PASS (Ứng viên tốt - đáp ứng yêu cầu)
-- 0-24 điểm: ❌ FAIL (Chưa đáp ứng yêu cầu)
-
-Lưu ý: Dự án hướng đến giáo dục và phát triển, nên ưu tiên thái độ học hỏi hơn kỹ thuật sâu. Hãy khách quan, công bằng và cung cấp phản hồi mang tính xây dựng.`;
-    }
+**Chấm điểm:** 40-50 PASS xuất sắc | 25-39 PASS tốt | 0-24 FAIL`;
+}
 
     // English prompt
-    return `You are a senior interviewer evaluating fresher/junior candidates for a ${input.jobTitle} position.
+    return `You are an expert interviewer evaluating fresher/junior/senior candidates for a ${input.jobTitle} position.
 
-Evaluate the following interview answers carefully:
+SCORING METHOD - 2 GROUPS OF CRITERIA:
+
+**GROUP 1 - Technical/Knowledge Criteria (score PER QUESTION):**
+- Basic IT Awareness
+- Logical Thinking
+- Clarity of Expression
+
+**GROUP 2 - Behavioral/Attitude Criteria (score ENTIRE INTERVIEW):**
+- Learning Attitude & Growth Mindset
+- Professional Attitude & Honesty
+
+---
+
+QUESTIONS AND ANSWERS:
 
 ${questionsText}
 
-📋 EVALUATE BASED ON 5 CORE DIMENSIONS (each scored 0-10):
+---
 
-1. Clarity of Expression (0-10)
-What to check:
-- Clear sentences
-- One idea per sentence
-- Minimal ambiguity
+📋 DETAILED INSTRUCTIONS:
 
-Signals:
-✅ Structured answers, short paragraphs
-❌ Very long sentences, unclear pronouns, rambling
+**FOR GROUP 1 (score each question based on its Criteria):**
 
-Score guide:
-- 0-2: Hard to understand
-- 3-5: Understandable but messy
-- 6-7: Quite clear
-- 8-10: Clear, concise, logical
+For each question:
+- Check the "Criteria" of that question
+- ONLY score GROUP 1 criteria that are in the Criteria list
+- If a criterion is NOT in Criteria → set null
+- Each criterion: 0-10 points
 
-2. Logical Thinking (0-10)
-What to check:
-- Cause → effect
-- Step-by-step reasoning
-- Answer matches the question
+Example:
+- Question 1 has Criteria: "Basic IT Awareness, Clarity of Expression, Logical Thinking"
+  → Score these 3 criteria
+- Question 1 has Criteria: "Basic IT Awareness, Clarity of Expression"
+  → Score these 2, set Logical Thinking = null
 
-Signals:
-✅ "First…, then…, therefore…"
-❌ Jumping ideas, unrelated stories
+# SCORING RUBRIC (Scoring Criteria)
 
-Example: "I failed to learn X because…, so I changed my approach by…"
+## 1. BASIC IT AWARENESS
+*Objective: Assess understanding of concepts, not memorization of buzzwords.*
+- **0 points:** Completely wrong, confuses basic concepts (e.g., Frontend ≈ Backend), or no answer.
+- **1-2 points:** Vague parroting of definitions, rote learning, cannot explain in own words.
+- **3-4 points:** Surface understanding, correct terminology but lacks context/examples. Fragmented explanation.
+- **5-6 points:** Understands core concept. Uses everyday language that's easy to understand. Terminology used accurately.
+- **7-8 points:** Deep understanding. Has real-world examples or hands-on experience. Can state basic pros/cons.
+- **9 points:** Very confident. Good connection to real systems. Nothing excessive, nothing missing.
+- **10 points:** Master level. Can explain to others clearly. Shows thinking of someone with practical experience (context, consequences).
 
-3. Learning Attitude & Growth Mindset (0-10)
-⭐ MOST IMPORTANT for freshers
+## 2. LOGICAL THINKING
+*Objective: Assess reasoning flow (Problem Solving), not memorization.*
+⚠️ **SPECIAL RULE:** If question is "Definition/Pure Theory" (Knowledge-based) -> Return score 'N/A'.
+- **0 points:** Logical contradictions, off-topic answer, jumping ideas randomly.
+- **1-2 points:** Weak reasoning, no structure (Intro/Body/Conclusion), lacks cause-effect relationships.
+- **3-4 points:** Basic logic but messy sequence, missing intermediate steps.
+- **5-6 points:** Clear sequence (Step 1 -> Step 2 -> Conclusion). Stays on point.
+- **7-8 points:** Rigorous. Analyzes trade-offs. Explains "Why" (not just "What").
+- **9 points:** Deep thinking, anticipates edge cases.
+- **10 points:** System Thinking. Can abstract and propose extended improvements.
 
-What to check:
-- Self-learning examples
-- Handling difficulty
-- Willingness to improve
+## 3. CLARITY OF EXPRESSION
+*Objective: Assess ability to communicate information.*
+- **0 points:** Incoherent, severe grammar errors, listener understands nothing.
+- **1-2 points:** Many filler words (um, uh, that thing...), no structure, poor expression.
+- **3-4 points:** Understandable but wordy, repetitive, rambling.
+- **5-6 points:** Clear, separates main ideas, decent sentence structure.
+- **7-8 points:** Coherent. Emphasizes key points. Uses terminology at the right time and place.
+- **9 points:** Very easy to understand even for non-technical people.
+- **10 points:** Excellent. Brief, concise. Professional style like training a team.
 
-Signals:
-✅ Mentions online courses, practice, fixing mistakes
-❌ Blames others, says "I'm not good at learning"
+# CONSTRAINT (Mandatory Rules)
+1. **Critical Thinking:** Don't score high just because answer is long or uses many English buzzwords if the core is wrong.
+2. **Score Selection:** If torn between 2 score levels (e.g., 6 and 7), MUST choose the LOWER level (6).
+3. **Reasoning:** Must provide brief reason (Evidence) extracted from the answer to defend the score given.
 
-4. Basic IT Awareness (0-10)
-Not depth — awareness
+**FOR GROUP 2 (score entire interview):**
 
-What to check:
-- Knows basic concepts
-- Can explain simply
-- Uses correct terms (even if shallow)
+Read ALL answers and evaluate these 2 criteria holistically:
 
-Signals:
-✅ Can explain HTML, API, Git in own words
-❌ Copy-paste definitions without understanding
+DEFINED ENUMS (Mandatory Label Set)
 
-5. Professional Attitude & Honesty (0-10)
-What to check:
-- Realistic self-assessment
-- Admits weaknesses
-- Respectful tone
+When labeling, you MAY ONLY use values from the lists below. Absolutely no improvising new terms.
 
-🚩 Red flags:
-- Overclaiming skills
-- "I know everything", "No weaknesses"
-- ChatGPT-like generic answers with no personal detail
+1. VALID TAGS:
 
-⚠️ RED FLAGS (check independently of score):
+"Honesty": Truthfulness, admits mistakes, integrity.
+"Communication": Expression skills, listening, clarifying issues.
+"Problem_Solving": Approach to handling problems, solution thinking.
+"Technical_Depth": Depth of technical knowledge, understanding essence.
+"Defensive": Defensive attitude, conservative, blames others, makes excuses.
+"Curiosity": Curiosity, eagerness to learn, drive for improvement.
 
-| Red Flag | Why |
-|----------|-----|
-| Answers don't match questions | Poor listening |
-| Copy-paste generic content | Low integrity |
-| Blaming teachers/company | Poor mindset |
-| Extremely short / lazy answers | Low effort |
-| Overly confident without evidence | Risky attitude |
+2. VALID SENTIMENTS:
 
-👉 1 major red flag = manual interview required
+"Positive": Good signal, constructive.
+"Negative": Bad signal, risk warning (red flag).
+"Neutral": Neutral, objective fact description.
 
-Provide your evaluation in the following JSON format (respond with ONLY valid JSON, no additional text):
+INSTRUCTION: CHAIN OF THOUGHT PROCESS
+
+Execute this 4-step reasoning process:
+
+STEP 1: Evidence Extraction (Extract & Label)
+Scan conversation, find statements clearly showing personality/thinking.
+Quote verbatim ("quote").
+Map that statement to exactly 01 most appropriate Tag from "VALID TAGS" list.
+Determine Sentiment from "VALID SENTIMENTS" list.
+
+STEP 2: Conflict & Context Analysis
+
+Analyze attitude changes (e.g., initially "Defensive" but later shifts to "Honesty" or "Curiosity").
+Determine if "Negative" signals are inherent nature or temporary psychological pressure.
+
+STEP 3: Reasoning (Argumentation)
+
+Synthesize data from Steps 1 & 2 to argue for 2 score groups:
+Learning Attitude & Growth Mindset: Heavily based on "Curiosity", "Technical_Depth" tags, and how they handle new things.
+Professional Attitude & Honesty: Heavily based on "Honesty", "Defensive", "Communication" tags.
+
+STEP 4: Scoring (Score 0-10)
+
+< 5: Many "Defensive", "Negative" tags.
+5 - 6.5: Average, still passive.
+7 - 8.5: Good, many "Positive", "Curiosity" tags.
+9 - 10: Excellent, high "Problem_Solving" and "Honesty" thinking.
+
+---
+
+📊 **JSON OUTPUT (respond with ONLY valid JSON):**
 
 {
-  "totalScore": <sum of all 5 criteria scores (0-50)>,
-  "finalRecommendation": "<PASS | FAIL>",
+  "finalRecommendation": "PASS|FAIL",
   "criteria": {
-    "clarity": <0-10>,
-    "logic": <0-10>,
-    "learningAttitude": <0-10>,
-    "itAwareness": <0-10>,
-    "professionalAttitude": <0-10>
+    "clarity": <average from questions with this criterion, or 0>,
+    "logic": <average from questions with this criterion, or 0>,
+    "learningAttitude": <score for entire interview 0-10>,
+    "itAwareness": <average from questions with this criterion, or 0>,
+    "professionalAttitude": <score for entire interview 0-10>
   },
-  "redFlags": ["<red flag 1 if any>", "<red flag 2 if any>"],
+  "redFlags": ["<red flag if any>"],
   "summary": "<2-3 sentence overall evaluation in English>",
   "detailedFeedback": [
     {
       "questionIndex": 0,
-      "strengths": ["<strength 1 in English>", "<strength 2>"],
-      "weaknesses": ["<weakness 1 in English>"],
-      "score": <individual question score>
+      "questionCriteria": ["<criteria of this question>"],
+      "scores": {
+        "clarity": <0-10 or null if not in criteria>,
+        "logic": <0-10 or null if not in criteria>,
+        "itAwareness": <0-10 or null if not in criteria>
+      },
+      "strengths": ["<strength>"],
+      "weaknesses": ["<weakness>"]
     }
-  ]
+  ],
+  "group2Analysis": {
+    "learningAttitude": {
+      "score": <0-10>,
+      "evidence": ["<evidence from answers>"]
+    },
+    "professionalAttitude": {
+      "score": <0-10>,
+      "evidence": ["<evidence from answers>"]
+    }
+  }
 }
 
-📊 SCORING MODEL (Total: 50 points):
-- 40-50: ✅ PASS (Excellent candidate - highly qualified)
-- 25-39: ✅ PASS (Good candidate - meets requirements)
-- 0-24: ❌ FAIL (Does not meet requirements)
-
-Note: For education-oriented projects, prioritize attitude over deep technical skills. Be objective, fair, and provide constructive feedback.`;
+**Scoring:** 40-50 PASS excellent | 25-39 PASS good | 0-24 FAIL`;
   }
 
   private detectVietnamese(input: InterviewInput): boolean {
@@ -359,6 +486,7 @@ Note: For education-oriented projects, prioritize attitude over deep technical s
       summary: rawResult.summary || 'No summary provided',
       redFlags: rawResult.redFlags || [],
       detailedFeedback: rawResult.detailedFeedback || null,
+      group2Analysis: rawResult.group2Analysis || null,
     };
   }
 }

@@ -100,7 +100,7 @@ export class InterviewsService {
   }
 
   async listQuestions(interviewId: string) {
-    return this.questionRepo.find({ where: { interview_id: interviewId }, order: { created_at: 'ASC' as const } });
+    return this.questionRepo.find({ where: { interview_id: interviewId }, order: { order_index: 'ASC' as const, created_at: 'ASC' as const } });
   }
 
   async getQuestion(questionId: string) {
@@ -210,7 +210,7 @@ export class InterviewsService {
     if (iv.employer_id !== emp.employer_id) throw new ForbiddenException('Not allowed');
 
     const [questions, assignments] = await Promise.all([
-      this.questionRepo.find({ where: { interview_id: interviewId }, order: { created_at: 'ASC' as const } }),
+      this.questionRepo.find({ where: { interview_id: interviewId }, order: { order_index: 'ASC' as const, created_at: 'ASC' as const } }),
       this.candidateInterviewRepo.find({ where: { interview_id: interviewId }, order: { assigned_at: 'DESC' as const } }),
     ]);
 

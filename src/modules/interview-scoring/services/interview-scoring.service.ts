@@ -74,6 +74,7 @@ export class InterviewScoringService {
       questions: answers.map(answer => ({
         question: answer.question.question_text,
         answer: answer.answer_text || '',
+        criteria: answer.question.criteria,
       })),
     };
 
@@ -92,7 +93,10 @@ export class InterviewScoringService {
       criteria: aiResult.criteria,
       ai_summary: aiResult.summary,
       model_used: 'gemini-2.5-flash',
-      detailed_feedback: aiResult.detailedFeedback,
+      detailed_feedback: {
+        ...aiResult.detailedFeedback,
+        group2Analysis: aiResult.group2Analysis,
+      },
     });
 
     const savedEvaluation = await this.aiEvaluationRepository.save(evaluation);

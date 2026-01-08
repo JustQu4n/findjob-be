@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsOptional, IsInt, IsNumber } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsInt, IsNumber, IsArray, IsString } from 'class-validator';
 
 export class CreateQuestionDto {
   @IsNotEmpty()
@@ -15,4 +15,9 @@ export class CreateQuestionDto {
   @IsOptional()
   @IsNumber()
   max_score?: number;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  criteria?: string[]; // AI-classified criteria: 'Clarity of Expression', 'Logical Thinking', 'Learning Attitude & Growth Mindset', 'Basic IT Awareness', 'Professional Attitude & Honesty'
 }

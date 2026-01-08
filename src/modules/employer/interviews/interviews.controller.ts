@@ -139,6 +139,15 @@ export class InterviewsController {
     return this.service.deleteQuestion(questionId);
   }
 
+  // AI Classify Question Criteria
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('employer')
+  @HttpPost(':interviewId/questions/:questionId/classify-criteria')
+  @HttpCode(HttpStatus.OK)
+  async classifyQuestionCriteria(@Param('questionId') questionId: string) {
+    return this.service.classifyQuestionCriteria(questionId);
+  }
+
   // Candidate interviews / answers
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('employer')

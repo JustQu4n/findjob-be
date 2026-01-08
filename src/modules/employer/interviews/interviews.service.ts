@@ -13,9 +13,15 @@ import { GradeAnswerDto } from './dto/grade-answer.dto';
 import { InviteCandidateDto } from './dto/invite-candidate.dto';
 import { NotificationsService } from '@/modules/notifications/notifications.service';
 import { EmailService } from '@/modules/email/email.service';
+import { AiAssistantService } from '@/modules/ai-assistant/ai-assistant.service';
+import { ClassifyCriteriaResponseDto } from './dto/classify-criteria-response.dto';
+import OpenAI from 'openai';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class InterviewsService {
+  private openai: OpenAI;
+
   constructor(
     @InjectRepository(InterviewQuestion)
     private readonly questionRepo: Repository<InterviewQuestion>,
@@ -31,7 +37,14 @@ export class InterviewsService {
     private readonly userRepo: Repository<User>,
     private readonly notificationsService: NotificationsService,
     private readonly emailService: EmailService,
-  ) {}
+    private readonly aiAssistantService: AiAssistantService,
+    private configService: ConfigService,
+  ) {
+    const apiKey = this.configService.get<string>('OPENAI_API_KEY');
+    if (apiKey) {
+      this.openai = new OpenAI({ apiKey });
+    }
+  }
   
   // Create interview session
   async createInterview(employerId: string, dto: import('./dto/create-interview.dto').CreateInterviewDto) {
@@ -364,4 +377,201 @@ export class InterviewsService {
       },
     };
   }
-}
+
+  /**
+   * Classify question criteria using AI
+   */
+  async classifyQuestionCriteria(questionId: string): Promise<ClassifyCriteriaResponseDto> {
+    // Get the question
+    const question = await this.getQuestion(questionId);
+
+    // Define the available criteria
+    const availableCriteria = [
+      'Clarity of Expression',
+      'Logical Thinking',
+      'Learning Attitude & Growth Mindset',
+      'Basic IT Awareness',
+      'Professional Attitude & Honesty',
+    ];
+
+    // Detect language of the question (simple check for Vietnamese characters)
+    const isVietnamese = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(question.question_text);
+
+    // Create prompt for AI based on language
+    const prompt = isVietnamese
+      ? `Bạn là một chuyên gia tuyển dụng. Phân tích câu hỏi phỏng vấn dưới đây và xác định tiêu chí nào sẽ được đánh giá dựa trên CÂU TRẢ LỜI của ứng viên.
+
+Câu hỏi: "${question.question_text}"
+
+**CÁC TIÊU CHÍ VÀ DẤU HIỆU NHẬN BIẾT:**
+
+1. **Clarity of Expression** (Khả năng diễn đạt rõ ràng)
+   Chọn tiêu chí này NẾU câu trả lời yêu cầu:
+   - Giải thích, mô tả, trình bày ý tưởng/kế hoạch/quy trình
+   - Sử dụng từ ngữ: "giải thích", "mô tả", "nói rõ", "trình bày", "bạn sẽ làm như thế nào"
+   - Cần cấu trúc câu logic, rõ ràng, dễ hiểu
+   - Đòi hỏi kỹ năng tổ chức thông tin và diễn đạt mạch lạc
+
+2. **Logical Thinking** (Tư duy logic)
+   Chọn tiêu chí này NẾU câu trả lời yêu cầu:
+   - Phân tích vấn đề, tìm nguyên nhân - kết quả
+   - Sắp xếp thứ tự ưu tiên, các bước thực hiện
+   - Đưa ra lý do, luận điểm có căn cứ
+   - Giải quyết tình huống, đưa ra quyết định có căn cứ logic
+   - Từ khóa: "tại sao", "như thế nào", "phân tích", "giải quyết", "quyết định", "ưu tiên"
+
+3. **Learning Attitude & Growth Mindset** (Thái độ học hỏi và phát triển)
+   Chọn tiêu chí này NẾU câu hỏi liên quan đến:
+   - Phản ứng khi gặp khó khăn/thất bại/sai lầm
+   - Tiếp nhận phản hồi/góp ý/chỉ trích
+   - Học hỏi kỹ năng/kiến thức mới
+   - Thích ứng với thay đổi
+   - Từ khóa: "học", "phát triển", "khó khăn", "thất bại", "sai lầm", "góp ý", "feedback", "thay đổi", "cải thiện"
+
+4. **Basic IT Awareness** (Hiểu biết cơ bản về IT)
+   Chọn tiêu chí này NẾU câu hỏi đề cập đến:
+   - Công nghệ, phần mềm, ứng dụng, công cụ số
+   - Internet, email, bảo mật thông tin
+   - Kỹ năng sử dụng máy tính, thiết bị điện tử
+   - Xu hướng công nghệ, chuyển đổi số
+   - Từ khóa: "công nghệ", "phần mềm", "app", "website", "digital", "online", "tool", "AI", "automation"
+
+5. **Professional Attitude & Honesty** (Thái độ chuyên nghiệp và trung thực)
+   Chọn tiêu chí này NẾU câu hỏi liên quan đến:
+   - Đạo đức nghề nghiệp, trách nhiệm, cam kết
+   - Xử lý xung đột lợi ích
+   - Tính trung thực, minh bạch
+   - Cách ứng xử với đồng nghiệp, cấp trên, khách hàng
+   - Từ khóa: "trung thực", "đạo đức", "trách nhiệm", "cam kết", "xung đột", "bí mật", "quy định", "nguyên tắc"
+
+**HƯỚNG DẪN:**
+- Một câu hỏi có thể đánh giá từ 1-5 tiêu chí
+- Chọn tiêu chí dựa trên những gì câu trả lời SẼ TIẾT LỘ, không phải nội dung câu hỏi
+- Trả về CHỈ danh sách tiêu chí bằng tiếng Anh, mỗi tiêu chí một dòng
+- Không giải thích, không đánh số, chỉ tên tiêu chí
+
+Ví dụ output:
+Clarity of Expression
+Logical Thinking`
+      : `You are a recruitment expert. Analyze the interview question below and identify which criteria will be evaluated based on the candidate's ANSWER.
+
+Question: "${question.question_text}"
+
+**CRITERIA AND DETECTION SIGNALS:**
+
+1. **Clarity of Expression**
+   Select this IF the answer requires:
+   - Explaining, describing, presenting ideas/plans/processes
+   - Keywords: "explain", "describe", "tell me about", "how would you", "walk me through"
+   - Needs logical structure, clear and understandable language
+   - Requires information organization and coherent expression skills
+
+2. **Logical Thinking**
+   Select this IF the answer requires:
+   - Problem analysis, identifying cause-effect relationships
+   - Prioritization, step-by-step planning
+   - Providing reasoned arguments with evidence
+   - Solving situations, making decisions based on logic
+   - Keywords: "why", "how", "analyze", "solve", "decide", "prioritize", "approach"
+
+3. **Learning Attitude & Growth Mindset**
+   Select this IF the question relates to:
+   - Response to challenges/failures/mistakes
+   - Receiving feedback/criticism
+   - Learning new skills/knowledge
+   - Adapting to change
+   - Keywords: "learn", "develop", "challenge", "mistake", "feedback", "change", "improve", "grow"
+
+4. **Basic IT Awareness**
+   Select this IF the question mentions:
+   - Technology, software, applications, digital tools
+   - Internet, email, information security
+   - Computer/device usage skills
+   - Technology trends, digital transformation
+   - Keywords: "technology", "software", "app", "website", "digital", "online", "tool", "AI", "automation"
+
+5. **Professional Attitude & Honesty**
+   Select this IF the question relates to:
+   - Professional ethics, responsibility, commitment
+   - Handling conflicts of interest
+   - Honesty, transparency
+   - Behavior with colleagues, superiors, clients
+   - Keywords: "honest", "ethics", "responsibility", "commitment", "conflict", "confidential", "policy", "principle"
+
+**INSTRUCTIONS:**
+- One question can evaluate 1-5 criteria
+- Select criteria based on what the answer WILL REVEAL, not the question content
+- Return ONLY a list of criteria in English, one per line
+- No explanations, no numbers, just criterion names
+
+Example output:
+Clarity of Expression
+Logical Thinking`;
+
+    try {
+      // Call OpenAI service
+      if (!this.openai) {
+        throw new BadRequestException('OpenAI is not configured. Please set OPENAI_API_KEY in environment variables.');
+      }
+
+      const completion = await this.openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: isVietnamese 
+              ? 'Bạn là chuyên gia tuyển dụng. Trả về CHỈ danh sách tiêu chí, mỗi tiêu chí một dòng, không có số thứ tự, không giải thích.'
+              : 'You are a recruitment expert. Return ONLY a list of criteria, one per line, no numbers, no explanations.',
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        temperature: 0.3,
+      });
+
+      const responseText = completion.choices[0].message.content?.trim() || '';
+      const lines = responseText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+      
+      // Match criteria from response
+      const matchedCriteria: string[] = [];
+      for (const line of lines) {
+        const matched = availableCriteria.find(c => 
+          line.toLowerCase().includes(c.toLowerCase()) || 
+          c.toLowerCase().includes(line.toLowerCase())
+        );
+        if (matched && !matchedCriteria.includes(matched)) {
+          matchedCriteria.push(matched);
+        }
+      }
+
+      // If no criteria matched, try to parse any valid criteria names
+      if (matchedCriteria.length === 0) {
+        for (const criterion of availableCriteria) {
+          if (responseText.toLowerCase().includes(criterion.toLowerCase())) {
+            matchedCriteria.push(criterion);
+          }
+        }
+      }
+
+      // Update question with criteria
+      question.criteria = matchedCriteria.length > 0 ? matchedCriteria : null;
+      await this.questionRepo.save(question);
+
+      return {
+        question_id: question.question_id,
+        question_text: question.question_text,
+        criteria: matchedCriteria,
+        message: matchedCriteria.length > 0 
+          ? (isVietnamese ? 'Phân loại thành công' : 'Classification successful')
+          : (isVietnamese ? 'Không thể xác định tiêu chí phù hợp' : 'Unable to determine appropriate criteria'),
+      };
+    } catch (error) {
+      const errorMessage = isVietnamese 
+        ? `Lỗi khi phân loại câu hỏi: ${error.message}`
+        : `Error classifying question: ${error.message}`;
+      throw new BadRequestException(errorMessage);
+    }
+    }
+  }

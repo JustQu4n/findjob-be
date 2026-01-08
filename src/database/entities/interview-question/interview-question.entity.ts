@@ -20,6 +20,9 @@ export class InterviewQuestion {
   @Column({ type: 'numeric', default: 0 })
   max_score: number;
 
+  @Column({ type: 'jsonb', nullable: true })
+  criteria: string[] | null; // AI-classified criteria for this question
+
   @CreateDateColumn()
   created_at: Date;
 

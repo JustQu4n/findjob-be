@@ -100,7 +100,7 @@ ${questionsText}
 
 📋 ĐÁNH GIÁ THEO 5 TIÊU CHÍ (mỗi tiêu chí 0-10 điểm):
 
-① Độ Rõ Ràng Diễn Đạt (Clarity of Expression) - 0-10 điểm
+1. Độ Rõ Ràng Diễn Đạt (Clarity of Expression) - 0-10 điểm
 Kiểm tra:
 - Câu văn rõ ràng, súc tích
 - Mỗi câu truyền tải một ý
@@ -115,7 +115,7 @@ Thang điểm:
 - 6-7: Khá rõ ràng
 - 8-10: Rõ ràng, súc tích, logic
 
-② Tư Duy Logic (Logical Thinking) - 0-10 điểm
+2. Tư Duy Logic (Logical Thinking) - 0-10 điểm
 Kiểm tra:
 - Nguyên nhân → kết quả rõ ràng
 - Lập luận từng bước
@@ -126,7 +126,7 @@ Dấu hiệu xấu: Nhảy ý, kể chuyện không liên quan
 
 Ví dụ tốt: "Em thất bại khi học X vì..., nên em đã thay đổi cách tiếp cận bằng..."
 
-③ Thái Độ Học Hỏi & Phát Triển (Learning Attitude & Growth Mindset) - 0-10 điểm
+3. Thái Độ Học Hỏi & Phát Triển (Learning Attitude & Growth Mindset) - 0-10 điểm
 ⭐ QUAN TRỌNG NHẤT với fresher
 
 Kiểm tra:
@@ -137,7 +137,7 @@ Kiểm tra:
 Dấu hiệu tốt: Đề cập khóa học online, thực hành, sửa lỗi
 Dấu hiệu xấu: Đổ lỗi người khác, nói "Em không giỏi học"
 
-④ Nhận Thức IT Cơ Bản (Basic IT Awareness) - 0-10 điểm
+4. Nhận Thức IT Cơ Bản (Basic IT Awareness) - 0-10 điểm
 Không cần sâu - chỉ cần có nhận thức
 
 Kiểm tra:
@@ -148,7 +148,7 @@ Kiểm tra:
 Dấu hiệu tốt: Giải thích HTML, API, Git bằng ngôn ngữ của mình
 Dấu hiệu xấu: Copy-paste định nghĩa không hiểu
 
-⑤ Thái Độ Chuyên Nghiệp & Trung Thực (Professional Attitude & Honesty) - 0-10 điểm
+5. Thái Độ Chuyên Nghiệp & Trung Thực (Professional Attitude & Honesty) - 0-10 điểm
 Kiểm tra:
 - Tự đánh giá thực tế
 - Thừa nhận điểm yếu
@@ -212,7 +212,7 @@ ${questionsText}
 
 📋 EVALUATE BASED ON 5 CORE DIMENSIONS (each scored 0-10):
 
-① Clarity of Expression (0-10)
+1. Clarity of Expression (0-10)
 What to check:
 - Clear sentences
 - One idea per sentence
@@ -228,7 +228,7 @@ Score guide:
 - 6-7: Quite clear
 - 8-10: Clear, concise, logical
 
-② Logical Thinking (0-10)
+2. Logical Thinking (0-10)
 What to check:
 - Cause → effect
 - Step-by-step reasoning
@@ -240,7 +240,7 @@ Signals:
 
 Example: "I failed to learn X because…, so I changed my approach by…"
 
-③ Learning Attitude & Growth Mindset (0-10)
+3. Learning Attitude & Growth Mindset (0-10)
 ⭐ MOST IMPORTANT for freshers
 
 What to check:
@@ -252,7 +252,7 @@ Signals:
 ✅ Mentions online courses, practice, fixing mistakes
 ❌ Blames others, says "I'm not good at learning"
 
-④ Basic IT Awareness (0-10)
+4. Basic IT Awareness (0-10)
 Not depth — awareness
 
 What to check:
@@ -264,7 +264,7 @@ Signals:
 ✅ Can explain HTML, API, Git in own words
 ❌ Copy-paste definitions without understanding
 
-⑤ Professional Attitude & Honesty (0-10)
+5. Professional Attitude & Honesty (0-10)
 What to check:
 - Realistic self-assessment
 - Admits weaknesses

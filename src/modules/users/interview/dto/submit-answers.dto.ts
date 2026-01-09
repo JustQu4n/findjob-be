@@ -1,5 +1,6 @@
 import { IsArray, ValidateNested, IsUUID, IsOptional, IsInt } from 'class-validator';
 import { Type } from 'class-transformer';
+import { BehaviorLogDto } from './behavior-log.dto';
 
 class AnswerItem {
   @IsUUID()
@@ -11,6 +12,12 @@ class AnswerItem {
   @IsOptional()
   @IsInt()
   elapsed_seconds?: number;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => BehaviorLogDto)
+  behavior_logs?: BehaviorLogDto[];
 }
 
 export class SubmitAnswersDto {

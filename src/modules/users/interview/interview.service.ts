@@ -8,6 +8,7 @@ import { Application } from 'src/database/entities/application/application.entit
 import { Interview } from 'src/database/entities/interview/interview.entity';
 import { Employer } from 'src/database/entities/employer/employer.entity';
 import { User } from 'src/database/entities/user/user.entity';
+import { CandidateBehaviorLog } from 'src/database/entities/candidate-behavior-log/candidate-behavior-log.entity';
 import { SubmitAnswersDto } from './dto/submit-answers.dto';
 import { NotificationsService } from 'src/modules/notifications/notifications.service';
 import { EmailService } from 'src/modules/email/email.service';
@@ -31,6 +32,8 @@ export class UsersInterviewService {
     private readonly employerRepo: Repository<Employer>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+    @InjectRepository(CandidateBehaviorLog)
+    private readonly behaviorLogRepo: Repository<CandidateBehaviorLog>,
     private readonly notificationsService: NotificationsService,
     private readonly emailService: EmailService,
     private readonly interviewScoringService: InterviewScoringService,
@@ -200,7 +203,9 @@ export class UsersInterviewService {
       throw new ForbiddenException('Bài interview này đã quá hạn.');
     }
 
-    // Upsert answers
+    let totalBehaviorLogsSaved = 0;
+
+    // Upsert answers and store behavior logs
     for (const it of dto.answers) {
       const existing = await this.answerRepo.findOne({ where: { candidate_interview_id: id, question_id: it.question_id } });
       if (existing) {
@@ -215,6 +220,22 @@ export class UsersInterviewService {
           elapsed_seconds: it.elapsed_seconds ?? null,
         } as any);
         await this.answerRepo.save(newA);
+      }
+
+      // Store behavior logs for this answer/question
+      if (it.behavior_logs && it.behavior_logs.length > 0) {
+        for (const log of it.behavior_logs) {
+          const behaviorLog = this.behaviorLogRepo.create({
+            candidate_interview_id: id,
+            question_id: log.question_id,
+            behavior_type: log.type,
+            timestamp: new Date(log.timestamp),
+            description: log.description || null,
+            metadata: log.data || null,
+          });
+          await this.behaviorLogRepo.save(behaviorLog);
+          totalBehaviorLogsSaved++;
+        }
       }
     }
 
@@ -269,7 +290,12 @@ export class UsersInterviewService {
       console.error('Failed to start AI scoring job for candidate_interview_id:', ci.candidate_interview_id, err);
     }
 
-    return { ok: true };
+    return {
+      success: true,
+      message: 'Interview submitted successfully',
+      answers_saved: dto.answers.length,
+      behavior_logs_saved: totalBehaviorLogsSaved,
+    };
   }
 
   async listAnswers(id: string, userId: string) {

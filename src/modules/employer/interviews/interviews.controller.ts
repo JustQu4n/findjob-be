@@ -191,4 +191,26 @@ export class InterviewsController {
   ) {
     return this.service.sendCongratulationsEmail(userId, candidateInterviewId);
   }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('employer')
+  @Get(':interviewId/candidates/:candidateInterviewId/behavior-logs')
+  @HttpCode(HttpStatus.OK)
+  async getBehaviorLogs(
+    @GetUser('user_id') userId: string,
+    @Param('candidateInterviewId') candidateInterviewId: string,
+  ) {
+    return this.service.getBehaviorLogs(userId, candidateInterviewId);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('employer')
+  @Get(':interviewId/behavior-summary')
+  @HttpCode(HttpStatus.OK)
+  async getBehaviorSummary(
+    @GetUser('user_id') userId: string,
+    @Param('interviewId') interviewId: string,
+  ) {
+    return this.service.getBehaviorSummary(userId, interviewId);
+  }
 }

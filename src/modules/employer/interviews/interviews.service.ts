@@ -7,6 +7,7 @@ import { InterviewAnswer } from 'src/database/entities/interview-answer/intervie
 import { Interview } from 'src/database/entities/interview/interview.entity';
 import { Employer } from 'src/database/entities/employer/employer.entity';
 import { User } from 'src/database/entities/user/user.entity';
+import { CandidateBehaviorLog } from 'src/database/entities/candidate-behavior-log/candidate-behavior-log.entity';
 import { CreateQuestionDto } from './dto/create-question.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { GradeAnswerDto } from './dto/grade-answer.dto';
@@ -15,6 +16,7 @@ import { NotificationsService } from '@/modules/notifications/notifications.serv
 import { EmailService } from '@/modules/email/email.service';
 import { AiAssistantService } from '@/modules/ai-assistant/ai-assistant.service';
 import { ClassifyCriteriaResponseDto } from './dto/classify-criteria-response.dto';
+import { calculateRiskScore, getBehaviorSummary, shouldFlagCandidate } from '@/common/utils/behavior-risk.util';
 import OpenAI from 'openai';
 import { ConfigService } from '@nestjs/config';
 
@@ -35,6 +37,8 @@ export class InterviewsService {
     private readonly employerRepo: Repository<Employer>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+    @InjectRepository(CandidateBehaviorLog)
+    private readonly behaviorLogRepo: Repository<CandidateBehaviorLog>,
     private readonly notificationsService: NotificationsService,
     private readonly emailService: EmailService,
     private readonly aiAssistantService: AiAssistantService,
@@ -639,6 +643,116 @@ Logical Thinking`;
       success: true, 
       message: 'Congratulations email sent successfully',
       sentTo: candidate.email,
+    };
+  }
+
+  // Get behavior logs for a specific candidate interview
+  async getBehaviorLogs(userId: string, candidateInterviewId: string) {
+    const emp = await this.resolveEmployerUser(userId);
+
+    // Get candidate interview with relations
+    const candidateInterview = await this.candidateInterviewRepo.findOne({
+      where: { candidate_interview_id: candidateInterviewId },
+      relations: ['candidate', 'interview'],
+    });
+
+    if (!candidateInterview) {
+      throw new NotFoundException('Candidate interview not found');
+    }
+
+    // Verify the interview belongs to the employer
+    if (candidateInterview.interview.employer_id !== emp.employer_id) {
+      throw new ForbiddenException('Not allowed to view behavior logs for this interview');
+    }
+
+    // Get behavior logs with question information
+    const logs = await this.behaviorLogRepo.find({
+      where: { candidate_interview_id: candidateInterviewId },
+      relations: ['question'],
+      order: { timestamp: 'ASC' },
+    });
+
+    // Calculate risk metrics
+    const behaviorSummary = getBehaviorSummary(logs);
+    const riskScore = calculateRiskScore(logs);
+
+    return {
+      success: true,
+      candidate_interview_id: candidateInterviewId,
+      candidate_name: candidateInterview.candidate.full_name,
+      candidate_email: candidateInterview.candidate.email,
+      total_logs: logs.length,
+      behavior_summary: behaviorSummary,
+      risk_score: riskScore,
+      logs: logs.map(log => ({
+        behavior_log_id: log.behavior_log_id,
+        question_id: log.question_id,
+        question_text: log.question?.question_text || null,
+        behavior_type: log.behavior_type,
+        timestamp: log.timestamp,
+        description: log.description,
+        metadata: log.metadata,
+      })),
+    };
+  }
+
+  // Get behavior summary for all candidates in an interview
+  async getBehaviorSummary(userId: string, interviewId: string) {
+    const emp = await this.resolveEmployerUser(userId);
+    const interview = await this.findInterview(interviewId);
+
+    // Verify the interview belongs to the employer
+    if (interview.employer_id !== emp.employer_id) {
+      throw new ForbiddenException('Not allowed to view behavior summary for this interview');
+    }
+
+    // Get all candidate interviews for this interview
+    const candidateInterviews = await this.candidateInterviewRepo.find({
+      where: { interview_id: interviewId },
+      relations: ['candidate'],
+    });
+
+    // Get all behavior logs for this interview
+    const allLogs = await this.behaviorLogRepo
+      .createQueryBuilder('log')
+      .leftJoinAndSelect('log.candidateInterview', 'ci')
+      .where('ci.interview_id = :interviewId', { interviewId })
+      .getMany();
+
+    // Calculate aggregated stats
+    const aggregatedStats = getBehaviorSummary(allLogs);
+
+    // Calculate stats for each candidate
+    const candidatesData = await Promise.all(
+      candidateInterviews.map(async (ci) => {
+        const candidateLogs = allLogs.filter(
+          log => log.candidate_interview_id === ci.candidate_interview_id
+        );
+        const summary = getBehaviorSummary(candidateLogs);
+        const riskScore = calculateRiskScore(candidateLogs);
+        const flagged = shouldFlagCandidate(summary, riskScore);
+
+        return {
+          candidate_interview_id: ci.candidate_interview_id,
+          candidate_name: ci.candidate.full_name,
+          total_score: ci.total_score,
+          behavior_count: candidateLogs.length,
+          risk_score: riskScore,
+          flagged,
+        };
+      })
+    );
+
+    const candidatesWithSuspiciousBehavior = candidatesData.filter(c => c.flagged).length;
+
+    return {
+      success: true,
+      interview_id: interviewId,
+      interview_title: interview.title,
+      total_candidates: candidateInterviews.length,
+      candidates_with_suspicious_behavior: candidatesWithSuspiciousBehavior,
+      aggregated_stats: aggregatedStats,
+      candidates: candidatesData,
     };
   }
 }

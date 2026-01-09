@@ -1,0 +1,8 @@
+export enum BehaviorType {
+  PASTE = 'PASTE',
+  COPY = 'COPY',
+  LARGE_DELETION = 'LARGE_DELETION',
+  FAST_TYPING = 'FAST_TYPING',
+  TAB_SWITCH = 'TAB_SWITCH',
+  FOCUS_LOSS = 'FOCUS_LOSS',
+}

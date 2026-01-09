@@ -9,13 +9,14 @@ import { Interview } from 'src/database/entities/interview/interview.entity';
 import { Employer } from 'src/database/entities/employer/employer.entity';
 import { Application } from 'src/database/entities/application/application.entity';
 import { User } from 'src/database/entities/user/user.entity';
+import { CandidateBehaviorLog } from 'src/database/entities/candidate-behavior-log/candidate-behavior-log.entity';
 import { NotificationsModule } from '@/modules/notifications/notifications.module';
 import { EmailModule } from '@/modules/email/email.module';
 import { AiAssistantModule } from '@/modules/ai-assistant/ai-assistant.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([InterviewQuestion, CandidateInterview, InterviewAnswer, Interview, Employer, Application, User]),
+    TypeOrmModule.forFeature([InterviewQuestion, CandidateInterview, InterviewAnswer, Interview, Employer, Application, User, CandidateBehaviorLog]),
     NotificationsModule,
     EmailModule,
     AiAssistantModule,

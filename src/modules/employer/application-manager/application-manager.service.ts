@@ -104,16 +104,16 @@ export class ApplicationManagerService {
       const jobSeekerUserId = updatedApplication?.jobSeeker?.user?.user_id;
       if (jobSeekerUserId) {
         const statusLabels = {
-          pending: 'Chờ duyệt',
-          reviewed: 'Đã xem xét',
-          accepted: 'Được chấp nhận',
-          rejected: 'Từ chối',
+          pending: 'Pending',
+          reviewed: 'Reviewed',
+          accepted: 'Accepted',
+          rejected: 'Rejected',
         };
         const statusLabel = statusLabels[dto.status] || dto.status;
         
         await this.notificationsService.sendToUser(jobSeekerUserId, {
           type: NotificationType.APPLICATION_STATUS_UPDATED,
-          message: `Trạng thái hồ sơ của bạn đã được cập nhật: ${statusLabel} - ${updatedApplication.jobPost?.title || ''}`,
+          message: `Your application status has been updated: ${statusLabel} - ${updatedApplication.jobPost?.title || ''}`,
           metadata: { 
             application_id: updatedApplication.application_id, 
             job_post_id: updatedApplication.job_post_id,

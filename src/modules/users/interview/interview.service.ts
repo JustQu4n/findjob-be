@@ -233,7 +233,7 @@ export class UsersInterviewService {
 
           await this.notificationsService.sendToUser(employerUser.user_id, {
             type: NotificationType.INTERVIEW_SUBMITTED,
-            message: `${candidateUser?.full_name || 'A candidate'} vừa nộp bài cho bài interview "${interview.title}"`,
+            message: `${candidateUser?.full_name || 'A candidate'} has submitted the interview "${interview.title}"`,
             metadata: {
               candidate_interview_id: ci.candidate_interview_id,
               interview_id: ci.interview_id,
@@ -245,12 +245,12 @@ export class UsersInterviewService {
           if (employerUser.email) {
             const frontendUrl = process.env.FRONTEND_URL || '';
             const link = `${frontendUrl}/employer/interviews/${interview.interview_id}/candidates/${ci.candidate_interview_id}`;
-            const subject = `Ứng viên đã nộp bài cho interview "${interview.title}"`;
+            const subject = `Candidate has submitted the interview "${interview.title}"`;
             const html = `
-              <h3>Ứng viên đã nộp bài</h3>
-              <p>Xin chào ${employerUser.full_name || ''},</p>
-              <p>Ứng viên <strong>${candidateUser?.full_name || 'A candidate'}</strong> đã nộp bài cho interview "${interview.title}".</p>
-              <p>Chi tiết: <a href="${link}">Xem bài làm</a></p>
+              <h3>Candidate Submission</h3>
+              <p>Hello ${employerUser.full_name || ''},</p>
+              <p>Candidate <strong>${candidateUser?.full_name || 'A candidate'}</strong> has submitted the interview "${interview.title}".</p>
+              <p>Details: <a href="${link}">View Submission</a></p>
             `;
             await this.emailService.sendApplicationStatusEmail(employerUser.email, subject, html);
           }
@@ -333,7 +333,7 @@ export class UsersInterviewService {
       if (user) {
         await this.notificationsService.sendToUser(userId, {
           type: NotificationType.INTERVIEW_ASSIGNED,
-          message: `Bạn đã chấp nhận tham gia bài interview "${interview.title}"${deadlineAt ? `. Hạn chót: ${deadlineAt.toLocaleString('vi-VN')}` : ''}`,
+          message: `You have accepted the interview "${interview.title}"${deadlineAt ? `. Deadline: ${deadlineAt.toLocaleString('en-US')}` : ''}`,
           metadata: {
             candidate_interview_id: savedCi.candidate_interview_id,
             interview_id: interviewId,
@@ -393,7 +393,7 @@ export class UsersInterviewService {
         try {
           await this.notificationsService.sendToUser(user.user_id, {
             type: NotificationType.INTERVIEW_REMINDER,
-            message: `Nhắc nhở: Bạn còn ${hoursLeft} giờ để hoàn thành bài interview "${(ci as any).interview?.title}"`,
+            message: `Reminder: You have ${hoursLeft} hours left to complete the interview "${(ci as any).interview?.title}"`,
             metadata: {
               candidate_interview_id: ci.candidate_interview_id,
               interview_id: ci.interview_id,

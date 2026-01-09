@@ -138,7 +138,7 @@ export class ApplicationsService {
       if (employerUserId) {
         await this.notificationsService.sendToUser(employerUserId, {
           type: NotificationType.NEW_APPLICATION,
-          message: `Bạn có ứng viên mới cho tin: ${jobPost.title || ''}`,
+          message: `You have a new applicant for: ${jobPost.title || ''}`,
           metadata: { application_id: application.application_id, job_post_id: jobPost.job_post_id },
         });
       }
@@ -146,7 +146,7 @@ export class ApplicationsService {
       // Confirmation for job seeker
       await this.notificationsService.sendToUser(jobSeeker.user_id, {
         type: NotificationType.APPLICATION_SUBMITTED,
-        message: `Bạn đã nộp đơn thành công cho vị trí: ${jobPost.title || ''}`,
+        message: `You have successfully applied for: ${jobPost.title || ''}`,
         metadata: { application_id: application.application_id, job_post_id: jobPost.job_post_id },
       });
     } catch (err) {

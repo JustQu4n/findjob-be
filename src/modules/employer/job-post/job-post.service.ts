@@ -430,14 +430,14 @@ export class JobPostService {
         relations: ['jobSeeker'],
       });
 
-      // Gửi thông báo cho từng follower
+      // Send notifications to each follower
       const notificationPromises = followers.map(async (follower) => {
         if (follower.jobSeeker?.user_id) {
           await this.notificationsService.sendToUser(
             follower.jobSeeker.user_id,
             {
               type: 'new_job_post',
-              message: `${companyName} vừa đăng tin tuyển dụng mới: ${jobTitle}`,
+              message: `${companyName} has posted a new job: ${jobTitle}`,
               metadata: {
                 company_id: companyId,
                 company_name: companyName,

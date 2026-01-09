@@ -74,6 +74,25 @@ export class EmailService {
     });
   }
 
+  async sendInterviewCongratulationsEmail(
+    email: string,
+    name: string,
+    interviewTitle: string,
+    companyName: string,
+    score?: number,
+  ): Promise<void> {
+    await this.mailerService.sendMail({
+      to: email,
+      subject: `Congratulations! You passed the interview: ${interviewTitle}`,
+      html: this.getInterviewCongratulationsTemplate(
+        name,
+        interviewTitle,
+        companyName,
+        score,
+      ),
+    });
+  }
+
   async sendEmployerMessageToUser(
     email: string,
     userName: string,
@@ -401,6 +420,88 @@ export class EmailService {
           <div class="footer">
             <p>&copy; 2024 CareerVibe. All rights reserved.</p>
             <p>Email này được gửi tự động, vui lòng không trả lời.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  private getInterviewCongratulationsTemplate(
+    userName: string,
+    interviewTitle: string,
+    companyName: string,
+    score?: number,
+  ): string {
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: white; padding: 30px; text-align: center; border-radius: 5px 5px 0 0; }
+          .content { background-color: #f9f9f9; padding: 30px; border-radius: 0 0 5px 5px; }
+          .success-banner { background-color: #D1FAE5; border-left: 4px solid #10B981; padding: 20px; border-radius: 5px; margin: 20px 0; }
+          .score-box { background-color: white; padding: 20px; border-radius: 5px; margin: 20px 0; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+          .company-info { background-color: #F3F4F6; padding: 15px; border-radius: 5px; margin: 15px 0; }
+          .next-steps { background-color: white; padding: 20px; border-radius: 5px; margin: 20px 0; }
+          .next-steps ul { list-style: none; padding: 0; }
+          .next-steps li { padding: 8px 0; padding-left: 25px; position: relative; }
+          .next-steps li:before { content: '✓'; position: absolute; left: 0; color: #10B981; font-weight: bold; }
+          .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+          .celebration { font-size: 48px; text-align: center; margin: 20px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div class="celebration">🎉</div>
+            <h1 style="margin: 10px 0;">Congratulations!</h1>
+            <p style="margin: 0; font-size: 18px;">You Passed the Interview!</p>
+          </div>
+          <div class="content">
+            <h2>Dear ${userName},</h2>
+            
+            <div class="success-banner">
+              <h3 style="margin-top: 0; color: #059669;">🌟 Excellent Performance!</h3>
+              <p style="margin-bottom: 0;">We are pleased to inform you that you have successfully passed the interview assessment.</p>
+            </div>
+
+            <div class="company-info">
+              <p style="margin: 0;"><strong>📋 Interview:</strong> ${interviewTitle}</p>
+              <p style="margin: 5px 0 0 0;"><strong>🏢 Company:</strong> ${companyName}</p>
+            </div>
+
+            ${score !== undefined && score !== null ? `
+            <div class="score-box">
+              <h3 style="margin-top: 0; color: #4F46E5;">Your Score</h3>
+              <div style="font-size: 48px; font-weight: bold; color: #10B981; margin: 10px 0;">${score}</div>
+              <p style="margin-bottom: 0; color: #666;">Outstanding Result!</p>
+            </div>
+            ` : ''}
+
+            <div class="next-steps">
+              <h3 style="margin-top: 0; color: #4F46E5;">🚀 What's Next?</h3>
+              <ul>
+                <li>The employer will review your results</li>
+                <li>You may be contacted for the next round of interviews</li>
+                <li>Keep an eye on your email and CareerVibe notifications</li>
+                <li>Continue exploring other opportunities on our platform</li>
+              </ul>
+            </div>
+
+            <div style="background-color: #EEF2FF; border-left: 4px solid #4F46E5; padding: 15px; margin: 20px 0; border-radius: 5px;">
+              <p style="margin: 0;"><strong>💡 Pro Tip:</strong></p>
+              <p style="margin: 5px 0 0 0;">Update your profile and resume to showcase your latest achievements and skills!</p>
+            </div>
+
+            <p>We wish you continued success in your career journey!</p>
+            <p style="margin-top: 30px;">Best regards,<br><strong>The CareerVibe Team</strong></p>
+          </div>
+          <div class="footer">
+            <p>&copy; 2026 CareerVibe. All rights reserved.</p>
+            <p>This is an automated email, please do not reply.</p>
           </div>
         </div>
       </body>

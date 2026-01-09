@@ -260,7 +260,7 @@ export class ApplicationService {
       if (jobSeekerUserId) {
         await this.notificationsService.sendToUser(jobSeekerUserId, {
           type: 'application_status_updated',
-          message: `Trạng thái hồ sơ của bạn đã được cập nhật tại vị trí ${fullApp.jobPost?.title || ''}: ${String(fullApp.status)}`,
+          message: `Your application status has been updated for ${fullApp.jobPost?.title || ''}: ${String(fullApp.status)}`,
           metadata: { application_id: fullApp.application_id, status: fullApp.status },
         });
       }
@@ -322,10 +322,10 @@ export class ApplicationService {
       });
 
       const statusLabels = {
-        pending: 'Chờ duyệt',
-        reviewed: 'Đã xem xét',
-        accepted: 'Được chấp nhận',
-        rejected: 'Từ chối',
+        pending: 'Pending',
+        reviewed: 'Reviewed',
+        accepted: 'Accepted',
+        rejected: 'Rejected',
       };
       const statusLabel = statusLabels[dto.status] || dto.status;
 
@@ -334,7 +334,7 @@ export class ApplicationService {
         if (jobSeekerUserId) {
           await this.notificationsService.sendToUser(jobSeekerUserId, {
             type: 'application_status_updated',
-            message: `Trạng thái hồ sơ của bạn đã được cập nhật: ${statusLabel} - ${app.jobPost?.title || ''}`,
+            message: `Your application status has been updated: ${statusLabel} - ${app.jobPost?.title || ''}`,
             metadata: { 
               application_id: app.application_id,
               job_post_id: app.job_post_id,

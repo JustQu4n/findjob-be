@@ -573,5 +573,72 @@ Logical Thinking`;
         : `Error classifying question: ${error.message}`;
       throw new BadRequestException(errorMessage);
     }
-    }
   }
+
+  // Send congratulations email to candidate who passed the interview
+  async sendCongratulationsEmail(userId: string, candidateInterviewId: string) {
+    // Verify employer permissions
+    const emp = await this.resolveEmployerUser(userId);
+    
+    // Get candidate interview with relations
+    const candidateInterview = await this.candidateInterviewRepo.findOne({
+      where: { candidate_interview_id: candidateInterviewId },
+      relations: ['candidate', 'interview'],
+    });
+
+    if (!candidateInterview) {
+      throw new NotFoundException('Candidate interview not found');
+    }
+
+    // Verify the interview belongs to the employer
+    if (candidateInterview.interview.employer_id !== emp.employer_id) {
+      throw new ForbiddenException('Not allowed to send email for this interview');
+    }
+
+    // Check if candidate passed (result should be 'passed' or similar)
+    if (candidateInterview.result !== 'passed') {
+      throw new BadRequestException('Candidate has not passed this interview');
+    }
+
+    const candidate = candidateInterview.candidate;
+    if (!candidate || !candidate.email) {
+      throw new NotFoundException('Candidate email not found');
+    }
+
+    const interview = candidateInterview.interview;
+    
+    // Load employer with company to get company name
+    const employer = await this.employerRepo.findOne({
+      where: { employer_id: interview.employer_id! },
+      relations: ['company'],
+    });
+    
+    const companyName = employer?.company?.name || 'Our Company';
+
+    // Send congratulations email
+    await this.emailService.sendInterviewCongratulationsEmail(
+      candidate.email,
+      candidate.full_name || 'Candidate',
+      interview.title,
+      companyName,
+      candidateInterview.total_score ? Number(candidateInterview.total_score) : undefined,
+    );
+
+    // Send notification as well
+    await this.notificationsService.sendToUser(candidate.user_id, {
+      type: 'interview_passed',
+      message: `Congratulations! You passed the interview "${interview.title}" from ${companyName}`,
+      metadata: {
+        candidate_interview_id: candidateInterviewId,
+        interview_id: interview.interview_id,
+        company_name: companyName,
+      },
+    });
+
+    return { 
+      success: true, 
+      message: 'Congratulations email sent successfully',
+      sentTo: candidate.email,
+    };
+  }
+}

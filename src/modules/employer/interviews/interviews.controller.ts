@@ -180,4 +180,15 @@ export class InterviewsController {
   async gradeAnswer(@GetUser('user_id') userId: string, @Param('answerId') answerId: string, @Body() dto: GradeAnswerDto) {
     return this.service.gradeAnswer(answerId, userId, dto);
   }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('employer')
+  @HttpPost(':interviewId/candidates/:candidateInterviewId/send-congratulations')
+  @HttpCode(HttpStatus.OK)
+  async sendCongratulationsEmail(
+    @GetUser('user_id') userId: string,
+    @Param('candidateInterviewId') candidateInterviewId: string,
+  ) {
+    return this.service.sendCongratulationsEmail(userId, candidateInterviewId);
+  }
 }
